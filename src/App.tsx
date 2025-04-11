@@ -10,6 +10,7 @@ function App() {
   const [redactionMethod, setRedactionMethod] = useState<"blur" | "box">("blur");
   const [redactionCount, setRedactionCount] = useState<number>(0);
   const [showRedactionCount, setShowRedactionCount] = useState<boolean>(true);
+  const [viewportHeight, setViewportHeight] = useState<number>(window.innerHeight);
   const [enabledTypes, setEnabledTypes] = useState({
     email: true,
     phone: true,
@@ -20,6 +21,17 @@ function App() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropAreaRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Handle viewport size changes
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Handle file drop
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -59,6 +71,9 @@ function App() {
       if (e.target && typeof e.target.result === 'string') {
         setImage(e.target.result);
         processImage(e.target.result);
+        
+        // Ensure content is scrolled to top when new image is loaded
+        window.scrollTo(0, 0);
       }
     };
     reader.readAsDataURL(file);
@@ -127,8 +142,17 @@ function App() {
     }));
   };
 
+  // Handle reset to upload new image
+  const handleNewImage = () => {
+    setImage(null);
+    setRedactedImage(null);
+    setRedactionCount(0);
+    // Reset scroll position
+    window.scrollTo(0, 0);
+  };
+
   return (
-    <main className="app-container">
+    <main className="app-container" style={{ minHeight: `${viewportHeight}px` }}>
       <header className="app-header">
         <h1>RedactShotX</h1>
         <p className="tagline">Effortlessly redact sensitive information from images</p>
@@ -166,7 +190,7 @@ function App() {
           />
         </div>
       ) : (
-        <div className="content-area">
+        <div className="content-area" ref={contentRef}>
           <div className="image-preview">
             {isProcessing ? (
               <div className="processing-overlay">
@@ -194,12 +218,14 @@ function App() {
                   <button 
                     className={redactionMethod === "blur" ? "active" : ""}
                     onClick={() => setRedactionMethod("blur")}
+                    aria-pressed={redactionMethod === "blur"}
                   >
                     Blur
                   </button>
                   <button 
                     className={redactionMethod === "box" ? "active" : ""}
                     onClick={() => setRedactionMethod("box")}
+                    aria-pressed={redactionMethod === "box"}
                   >
                     Black Box
                   </button>
@@ -215,6 +241,7 @@ function App() {
                         type="checkbox" 
                         checked={enabled}
                         onChange={() => toggleRedactionType(type as keyof typeof enabledTypes)}
+                        aria-label={`Toggle ${type} detection`}
                       />
                       <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
                     </label>
@@ -228,6 +255,7 @@ function App() {
                     type="checkbox" 
                     checked={showRedactionCount}
                     onChange={() => setShowRedactionCount(!showRedactionCount)}
+                    aria-label="Toggle redaction count display"
                   />
                   <span>Show redaction count</span>
                 </label>
@@ -237,10 +265,8 @@ function App() {
             <div className="action-buttons">
               <button 
                 className="secondary-button" 
-                onClick={() => {
-                  setImage(null);
-                  setRedactedImage(null);
-                }}
+                onClick={handleNewImage}
+                aria-label="Upload a new image"
               >
                 New Image
               </button>
@@ -248,6 +274,7 @@ function App() {
                 className="primary-button"
                 onClick={exportImage}
                 disabled={!redactedImage || isProcessing}
+                aria-label="Export redacted image"
               >
                 Export Redacted Image
               </button>
