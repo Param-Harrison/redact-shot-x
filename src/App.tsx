@@ -116,6 +116,10 @@ function App() {
     identification: "Detects ID document numbers",
     dateTime: "Detects dates and times",
     advanced: "Less common PII types that are off by default",
+    domainName: "Detects domain names",
+    url: "Detects web addresses and URLs",
+    nrp: "Detects NRP (National Provider Identifier) numbers",
+    medicalLicense: "Detects medical license numbers",
   };
 
   // Handle viewport size changes

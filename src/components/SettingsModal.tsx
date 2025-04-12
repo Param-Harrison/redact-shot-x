@@ -98,6 +98,10 @@ const formatPiiTypeName = (type: string): string => {
     case 'ZIPCODE': return 'ZIP Codes';
     case 'LOCATION': return 'Location Names';
     case 'DATE': return 'Dates';
+    case 'MEDICAL_LICENSE': return 'Medical License Numbers';
+    case 'DOMAIN_NAME': return 'Domain Names';
+    case 'URL': return 'URLs';
+    case 'NRP': return 'NRP (National Provider Identifier) Numbers';
     default: return type.replace(/_/g, ' ');
   }
 };
@@ -122,6 +126,11 @@ const getDescriptionForPiiType = (type: string): string => {
     case 'ZIPCODE': return 'Redact ZIP and postal codes';
     case 'LOCATION': return 'Redact locations, cities, and place names';
     case 'DATE': return 'Redact dates in various formats';
+    case 'MEDICAL_LICENSE': return 'Redact medical license numbers';
+    case 'DOMAIN_NAME': return 'Redact domain names';
+    case 'URL': return 'Redact web addresses and URLs';
+    case 'NRP': return 'Redact NRP (National Provider Identifier) numbers';
+    
     default: return `Redact ${type.toLowerCase().replace(/_/g, ' ')}`;
   }
 };
