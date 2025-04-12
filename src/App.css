@@ -1195,36 +1195,45 @@ button {
   background-color: rgba(52, 211, 153, 0.15);
 }
 
-/* Tooltip */
+/* Tooltip container with fixed positioning */
+.tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+/* Improved tooltip with fixed positioning and overflow handling */
 .tooltip {
   position: absolute;
   top: -10px;
-  transform: translateY(-100%);
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
   background-color: #333;
   color: white;
   padding: 0.75rem 1rem;
   border-radius: 6px;
   font-size: 0.875rem;
-  width: 250px;
-  max-width: 90vw;
+  width: max-content;
+  max-width: min(250px, 90vw);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 100;
-  animation: tooltipFadeIn 0.15s ease;
+  opacity: 0;
   line-height: 1.4;
   text-align: left;
   word-wrap: break-word;
   white-space: normal;
+  pointer-events: none;
+  will-change: opacity;
+  transition: opacity 0.15s ease;
+  /* Prevent any horizontal overflow */
+  overflow-wrap: break-word;
 }
 
-@keyframes tooltipFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-95%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(-100%);
-  }
+/* Show tooltip with improved animation - no transform change to prevent jumping */
+.tooltip-container:hover .tooltip {
+  opacity: 1;
 }
 
 /* Dark mode tooltip styling */
@@ -1233,15 +1242,51 @@ button {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Custom tooltip styles - fix animations */
+.custom-tooltip {
+  position: absolute;
+  background-color: #333;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 100;
+  max-width: 200px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  will-change: opacity;
+  transition: opacity 0.2s ease;
+}
+
+.tooltip-container:hover .custom-tooltip {
+  opacity: 1;
+}
+
+/* Adjust tooltip animations for horizontal tooltips */
+.tooltip-left, 
+.tooltip-right {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tooltip-container:hover .tooltip-left,
+.tooltip-container:hover .tooltip-right {
+  opacity: 1;
+}
+
 /* Adjust tooltip position based on window edge */
 .tooltip.left-aligned {
-  right: auto;
   left: 0;
+  transform: translateY(-100%);
 }
 
 .tooltip.right-aligned {
-  right: 0;
   left: auto;
+  right: 0;
+  transform: translateY(-100%);
 }
 
 /* Center-aligned tooltips */
@@ -1631,11 +1676,28 @@ button {
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
-/* Settings Modal Content */
+/* Settings Modal Content - Fix scrollbar */
 .settings-modal-content {
   padding: 1.5rem;
   overflow-y: auto;
   max-height: calc(90vh - 150px);
+  scrollbar-width: auto; /* Use default Firefox scrollbar */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Use default scrollbar styling for WebKit browsers */
+.settings-modal-content::-webkit-scrollbar {
+  width: auto; /* Use browser default width */
+  height: auto;
+}
+
+.settings-modal-content::-webkit-scrollbar-thumb {
+  background: auto; /* Use browser default */
+  border-radius: auto;
+}
+
+.settings-modal-content::-webkit-scrollbar-track {
+  background: auto; /* Use browser default */
 }
 
 /* Settings Modal Footer */
@@ -2109,14 +2171,6 @@ button {
   gap: 0.75rem;
 }
 
-/* Tooltip container */
-.tooltip-container {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* Settings tabs with improved styling */
 .settings-tabs {
   display: flex;
@@ -2271,12 +2325,6 @@ button {
   background-color: var(--primary-hover);
 }
 
-/* Dark mode toggle and settings buttons */
-.dark-mode-toggle svg, 
-.settings-button svg {
-  /* Removed conflicting styles */
-}
-
 .dark-mode .dark-mode-toggle,
 .dark-mode .settings-button {
   color: #94a3b8;
@@ -2286,19 +2334,6 @@ button {
 .dark-mode .settings-button:hover {
   color: var(--primary-color);
   background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Fix SVG icon visibility - updated to use our new .icon-svg class */
-.settings-button svg,
-.dark-mode-toggle svg,
-.close-button svg {
-  /* Removed conflicting styles */
-}
-
-.dark-mode .settings-button svg,
-.dark-mode .dark-mode-toggle svg,
-.dark-mode .close-button svg {
-  /* Removed conflicting styles */
 }
 
 /* Make the drop zone icon smaller */
@@ -2867,5 +2902,61 @@ button {
 .dark-mode .drop-area:hover {
   border-color: var(--primary-color);
   background-color: #2a3952; /* Much more visible difference */
+}
+
+/* Secondary button dark mode styling */
+.dark-mode .secondary-button {
+  background-color: #334155;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .secondary-button:hover {
+  background-color: #475569;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Close button in dark mode */
+.dark-mode .close-button {
+  color: #e2e8f0;
+}
+
+.dark-mode .close-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Add global overflow handling to prevent horizontal scrolling */
+body, .app-container, .settings-modal-content {
+  overflow-x: hidden;
+}
+
+/* Tooltip position fixing for all tooltip variations */
+.tooltip-container .tooltip-bottom {
+  top: calc(100% + 8px);
+  left: 50%;
+  bottom: auto;
+  transform: translateX(-50%);
+}
+
+.tooltip-container .tooltip-top {
+  bottom: calc(100% + 8px);
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tooltip-container .tooltip-right {
+  left: calc(100% + 8px);
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tooltip-container .tooltip-left {
+  right: calc(100% + 8px);
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
