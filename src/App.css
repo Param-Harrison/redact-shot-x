@@ -1048,16 +1048,17 @@ button {
   }
   
   .info-icon {
-    background-color: rgba(77, 148, 255, 0.2);
+    background-color: rgba(52, 211, 153, 0.15);
   }
   
   .tooltip {
     background-color: #1a1a1a;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
   
   .tooltip::after {
-    border-top: 8px solid #1a1a1a;
+    border-top-color: #1a1a1a;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
   }
   
   .tag-input-wrapper {
@@ -1173,7 +1174,6 @@ button {
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-right: 4px;
 }
 
@@ -1184,7 +1184,6 @@ button {
 
 .dark-mode .info-icon {
   background-color: rgba(52, 211, 153, 0.15);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Tooltip */
@@ -1199,9 +1198,9 @@ button {
   font-size: 0.875rem;
   width: 250px;
   max-width: 90vw;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 100;
-  animation: tooltipFadeIn 0.2s ease;
+  animation: tooltipFadeIn 0.15s ease;
   line-height: 1.4;
   text-align: left;
   word-wrap: break-word;
@@ -1211,12 +1210,18 @@ button {
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-90%);
+    transform: translateY(-95%);
   }
   to {
     opacity: 1;
     transform: translateY(-100%);
   }
+}
+
+/* Dark mode tooltip styling */
+.dark-mode .tooltip {
+  background-color: #1a1a1a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Adjust tooltip position based on window edge */
@@ -1240,12 +1245,13 @@ button {
 .tooltip::after {
   content: '';
   position: absolute;
-  bottom: -8px;
+  bottom: -6px;
   width: 0;
   height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid #333;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #333;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.05));
   transform: translateX(0);
 }
 
@@ -1265,13 +1271,28 @@ button {
   transform: translateX(-50%);
 }
 
-.dark-mode .tooltip {
-  background-color: #1a1a1a;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
 .dark-mode .tooltip::after {
   border-top-color: #1a1a1a;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+}
+
+.tooltip-left::before, .tooltip-right::before {
+  left: 50%;
+  right: auto;
+  top: 100%;
+  bottom: auto;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #333;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.05));
+}
+
+.dark-mode .tooltip-left::before, 
+.dark-mode .tooltip-right::before {
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-top-color: #1a1a1a;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
 }
 
 /* Make tooltips responsive */
@@ -1314,6 +1335,7 @@ button {
     transform: translateX(-50%);
     border: 5px solid transparent;
     border-top-color: #333;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.05));
   }
   
   .dark-mode .tooltip-left::before, 
@@ -2309,7 +2331,9 @@ button {
 }
 
 .dark-mode .tooltip-left::before {
-  border-left-color: #1a1a1a;
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-top-color: #1a1a1a;
 }
 
 /* Handle edge cases for tooltips close to window edges */
