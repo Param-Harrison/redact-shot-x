@@ -6,6 +6,8 @@ import DropZone from "./components/DropZone";
 import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
 import SettingsModal, { EnabledTypesRecord as SettingsEnabledTypesRecord } from "./components/SettingsModal";
+import { processImage as processImageApi } from "./services/api";
+import { API_URL } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
 // This is adjusted to match SettingsModal's EnabledTypesRecord type
@@ -53,6 +55,7 @@ function App() {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   
   // Updated PII types based on Microsoft Presidio's supported entities
   const [enabledTypes, setEnabledTypes] = useState<EnabledTypesRecord>({
@@ -206,19 +209,33 @@ function App() {
   // Process image with redaction
   const processImage = async (imageData: string) => {
     setIsProcessing(true);
+    setApiError(null);
     
     try {
-      // In a real implementation, this would call the Tauri backend for OCR and redaction
-      // For now, we'll simulate processing with a timeout
+      // Create configuration object for Python backend
+      const config = {
+        enabledTypes,
+        redactionMethod,
+        allowListTags,
+        denyListTags,
+        useContextEnhancement,
+        customRegex: regexPatternInput
+      };
       
-      setTimeout(() => {
-        // Simulate redacted image (in real app this would come from backend)
-        setRedactedImage(imageData); // Using same image for demo
-        setRedactionCount(Math.floor(Math.random() * 8) + 1); // Random count for demo
-        setIsProcessing(false);
-      }, 1500);
+      // Call our unified API service that handles both web and Tauri environments
+      const result = await processImageApi(imageData, config);
+      
+      if (result.success) {
+        setRedactedImage(result.redactedImage);
+        setRedactionCount(result.redactionCount);
+      } else {
+        console.error("Error processing image:", result.error);
+        setApiError(result.error || 'Unknown error');
+      }
     } catch (error) {
       console.error("Error processing image:", error);
+      setApiError(error instanceof Error ? error.message : 'Failed to connect to API server');
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -237,15 +254,29 @@ function App() {
 
   // Export redacted image
   const exportImage = async () => {
-    // In real implementation, this would use Tauri to save the file
-    // For demo purposes, we'll just download the image
     if (redactedImage) {
-      const link = document.createElement('a');
-      link.href = redactedImage;
-      link.download = isDicomImage ? 'redacted-image.dcm' : 'redacted-image.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        // For base64 images, convert to blob for download
+        const base64Data = redactedImage.split(';base64,').pop() || '';
+        const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
+        
+        // Create object URL for the blob
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Create link and trigger download
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = isDicomImage ? 'redacted-image.dcm' : 'redacted-image.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up object URL
+        URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.error("Error exporting image:", error);
+        alert("Failed to export image. Please try again.");
+      }
     }
   };
 
@@ -364,6 +395,13 @@ function App() {
         </>
       ) : (
         <div className="content-area" ref={contentRef}>
+          {apiError && (
+            <div className="api-error-message">
+              <p>Error: {apiError}</p>
+              <p>Make sure the Python API server is running at {API_URL}</p>
+            </div>
+          )}
+          
           <ImagePreview
             image={image}
             redactedImage={redactedImage}

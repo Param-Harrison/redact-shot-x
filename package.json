@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "web": "vite --config vite.web.config.ts",
+    "build:web": "tsc && vite build --config vite.web.config.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

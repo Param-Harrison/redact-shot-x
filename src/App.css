@@ -336,7 +336,7 @@ html, body {
 }
 
 .dark-mode .drop-area {
-  background-color: #2d3748;
+  background-color: #1e293b; /* Match app container background */
   border-color: #4b5563;
 }
 
@@ -2055,11 +2055,11 @@ button {
 
 .dark-mode .setting-item {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background-color: rgba(30, 41, 59, 0.5);
+  background-color: rgba(42, 58, 81, 0.7); /* Brighter and more opaque for better contrast */
 }
 
 .dark-mode .setting-item:hover {
-  background-color: rgba(30, 41, 59, 0.8);
+  background-color: rgba(55, 71, 94, 0.8); /* Lighter on hover for better feedback */
 }
 
 .setting-item-text {
@@ -2472,7 +2472,7 @@ button {
 }
 
 .dark-mode .redaction-method-container {
-  background-color: #2c2c2c;
+  background-color: #293548; /* Slightly lighter than #1e293b for contrast */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -2519,7 +2519,7 @@ button {
 }
 
 .dark-mode .redaction-method-options {
-  background-color: #3a3a3a;
+  background-color: #0f172a;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
@@ -2554,7 +2554,7 @@ button {
 }
 
 .dark-mode .redaction-method-option.active {
-  background-color: #2c2c2c;
+  background-color: #334155; /* Lighter than container for contrast */
   color: var(--primary-color);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
@@ -2792,5 +2792,80 @@ button {
     opacity: 1;
     transform: translate(-50%, 0);
   }
+}
+
+/* API Error Message */
+.api-error-message {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background-color: #fff2f2;
+  border: 1px solid #ffcccb;
+  border-radius: var(--border-radius);
+  color: #d32f2f;
+}
+
+.api-error-message p {
+  margin: 5px 0;
+}
+
+.dark-mode .api-error-message {
+  background-color: rgba(211, 47, 47, 0.2);
+  color: #ff6b6b;
+}
+
+.dark-mode .drop-area:hover {
+  border-color: var(--primary-color);
+  background-color: #233246; /* Lighter than base background */
+}
+
+.dark-mode .drop-area.dragging {
+  border-color: var(--primary-color);
+  background-color: rgba(52, 211, 153, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .drop-icon {
+  background-color: #2d3748; /* Slightly lighter than background */
+  color: var(--primary-color);
+}
+
+.dark-mode .drop-area h3 {
+  color: #e5e7eb; /* Lighter text for better contrast */
+}
+
+/* Image preview dark mode */
+.dark-mode .image-preview {
+  background-color: #1e293b; /* Match app container */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Processing overlay dark mode */
+.dark-mode .processing-overlay {
+  background-color: rgba(15, 23, 42, 0.8);
+}
+
+/* Add dark mode styling for toggle slider */
+.dark-mode .toggle-slider {
+  background-color: #1a2638; /* Darker background for contrast */
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .toggle-slider:before {
+  background-color: #94a3b8; /* Light slate for the toggle handle */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .toggle-switch input:checked + .toggle-slider {
+  background-color: var(--primary-color);
+}
+
+.dark-mode .toggle-switch input:checked + .toggle-slider:before {
+  background-color: white; /* White handle when active */
+}
+
+/* Improve drop-area hover state in dark mode */
+.dark-mode .drop-area:hover {
+  border-color: var(--primary-color);
+  background-color: #2a3952; /* Much more visible difference */
 }
 

@@ -1,12 +1,6 @@
-# 🧼 Product Requirements Document: RedactShotX
+# 🧼 RedactShotX - Screenshot PII Scrubber
 
-## 🧠 App Name
-
-**RedactShotX** — Screenshot PII Scrubber (Image Redactor)
-
-## 🚀 Goal
-
-A beautifully minimal, local-only desktop and mobile app to automatically detect and redact sensitive information from images (screenshots). The app uses OCR to extract text and then applies automatic redaction using blur or black boxes.
+A beautifully minimal app to automatically detect and redact sensitive information from images (screenshots). The app uses OCR to extract text and then applies automatic redaction using blur or black boxes.
 
 ## 🎯 Target Audience
 
@@ -15,6 +9,125 @@ A beautifully minimal, local-only desktop and mobile app to automatically detect
 - Customer support teams
 - Product managers
 - Freelancers sharing annotated screenshots
+
+## 🌟 Features
+
+- Automatic detection of PII in images
+- One-click redaction of emails, phone numbers, credit cards, etc.
+- Drag-and-drop simplicity
+- Instant export for sharing
+- Gorgeous, minimal UI
+
+## 🏗️ Architecture
+
+RedactShotX is available in two flavors:
+
+### 1. Tauri Desktop App
+
+- **Frontend**: React.js for the user interface
+- **Application Wrapper**: Tauri (Rust) for cross-platform desktop support
+- **Redaction Engine**: Python with Microsoft Presidio for powerful PII detection and redaction
+
+### 2. Web App Version
+
+- **Frontend**: Same React.js components as the desktop version
+- **Backend**: Python FastAPI server for the REST API
+- **Redaction Engine**: Same Microsoft Presidio engine used in both versions
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 16+
+- Python 3.8+
+- npm or yarn
+- For Tauri: Rust toolchain and platform-specific dependencies (see [Tauri prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites))
+
+### Running the Web Version
+
+#### Option 1: Using convenience scripts (recommended)
+
+These scripts start both the backend API server and frontend in one step:
+
+```bash
+# On Unix/macOS
+./run-web-app.sh
+
+# On Windows
+run-web-app.bat
+```
+
+#### Option 2: Manual startup
+
+1. Start the Python backend in a terminal:
+
+   ```bash
+   # On Unix/macOS
+   ./start-api-server.sh
+
+   # On Windows
+   start-api-server.bat
+   ```
+
+2. In a separate terminal, start the React frontend:
+
+   ```bash
+   npm run web
+   ```
+
+The web app will be available at http://localhost:3000.
+
+### Running the Tauri Desktop App
+
+```bash
+npm run tauri dev
+```
+
+## 📦 Building for Production
+
+### Web Version
+
+```bash
+# Install dependencies if needed
+npm install
+
+# Build the React app with web-specific config
+npm run build:web
+```
+
+The built files will be in `dist-web/`.
+
+### Tauri Desktop App
+
+```bash
+# Install dependencies
+npm install
+
+# Build the app
+npm run tauri build
+```
+
+The built binaries will be in `src-tauri/target/release/bundle/`.
+
+## 🛠️ Technology Stack
+
+- **Frontend**: React, TypeScript
+- **Desktop Wrapper**: Tauri (Rust)
+- **Backend API**: Python, FastAPI
+- **Redaction Engine**: Microsoft Presidio
+- **OCR**: Tesseract (via Presidio)
+
+## 📚 Documentation
+
+- [Python Backend](src-python/README.md)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🌟 Unique Value Proposition
 
@@ -137,13 +250,3 @@ The tech stack is intentionally left open to allow platform-specific optimizatio
 3. Backend performs OCR → detects PII → applies redactions → saves `redacted.png`
 4. Frontend updates canvas to show `redacted.png`
 5. User clicks Export → saves redacted image
-
----
-
-# 📦 Distribution
-
-- macOS (DMG)
-- Windows (EXE)
-- Linux (AppImage, .deb/.rpm)
-- Android (via Tauri Mobile build)
-- iOS (TestFlight + App Store, subject to notarization)
