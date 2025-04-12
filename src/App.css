@@ -131,31 +131,27 @@ html, body {
   align-items: center;
 }
 
+/* Icon styles - updated for better visibility */
 .icon-button {
-  background: none !important;
-  border: none !important;
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 50% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  position: relative !important;
-  cursor: pointer !important;
-  overflow: visible !important;
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+  padding: 0;
+  color: #4b5563;
+  transition: all 0.2s ease;
 }
 
 .icon-button:hover {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Ensure icons are visible */
-.icon-button svg {
-  width: 20px;
-  height: 20px;
-  stroke: #4b5563;
-  fill: none;
-  display: block;
+  background-color: rgba(0, 0, 0, 0.08);
+  color: var(--primary-color);
 }
 
 .dark-mode .icon-button {
@@ -165,6 +161,104 @@ html, body {
 .dark-mode .icon-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: var(--primary-color);
+}
+
+/* SVG icon styling */
+.icon-svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  display: block;
+}
+
+/* Dark mode toggle & settings button specific styling */
+.dark-mode-toggle .icon-svg, 
+.settings-button .icon-svg,
+.close-button .icon-svg {
+  stroke: currentColor;
+}
+
+/* Settings button icon */
+.settings-button {
+  margin-left: 8px;
+}
+
+/* Close button styling */
+.close-button {
+  position: relative;
+}
+
+.close-button .icon-svg {
+  width: 20px;
+  height: 20px;
+}
+
+.close-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.dark-mode .close-button {
+  color: #94a3b8;
+}
+
+.dark-mode .close-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--primary-color);
+}
+
+/* Ensure tooltips work with new icon button */
+.icon-button[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 100;
+  max-width: 250px;
+  text-align: center;
+}
+
+/* Keep tooltips within viewport bounds */
+.icon-button[title]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #333 transparent;
+  z-index: 100;
+}
+
+/* Prevent tooltip from going off screen */
+.icon-button.settings-button[title]:hover::after {
+  transform: translateX(calc(-100% + 20px));
+  left: 100%;
+}
+
+.icon-button.settings-button[title]:hover::before {
+  left: auto;
+  right: 10px;
+}
+
+.dark-mode .icon-button[title]:hover::after {
+  background-color: #1a1a1a;
+}
+
+.dark-mode .icon-button[title]:hover::before {
+  border-color: transparent transparent #1a1a1a transparent;
 }
 
 /* Data tooltip attribute */
@@ -1098,14 +1192,29 @@ button {
   transform: translateY(-100%);
   background-color: #333;
   color: white;
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: 6px;
   font-size: 0.875rem;
-  width: 220px;
-  max-width: 100%;
+  width: 250px;
+  max-width: 90vw;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
   z-index: 100;
-  animation: fadeIn 0.2s ease;
+  animation: tooltipFadeIn 0.2s ease;
+  line-height: 1.4;
+  text-align: left;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-95%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-100%);
+  }
 }
 
 /* Adjust tooltip position based on window edge */
@@ -1117,6 +1226,12 @@ button {
 .tooltip.right-aligned {
   right: 0;
   left: auto;
+}
+
+/* Center-aligned tooltips */
+.tooltip.center-aligned {
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
 }
 
 .tooltip::after {
@@ -1138,6 +1253,54 @@ button {
 .tooltip.right-aligned::after {
   right: 15px;
   left: auto;
+}
+
+.tooltip.center-aligned::after {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dark-mode .tooltip {
+  background-color: #1a1a1a;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .tooltip::after {
+  border-top-color: #1a1a1a;
+}
+
+/* Make tooltips responsive */
+@media (max-width: 768px) {
+  .tooltip {
+    width: auto;
+    max-width: 85vw;
+    padding: 0.75rem;
+  }
+  
+  /* On mobile, center all tooltips for better visibility */
+  .tooltip.left-aligned,
+  .tooltip.right-aligned {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(-100%);
+  }
+  
+  .tooltip-left::before, .tooltip-right::before {
+    left: 50%;
+    right: auto;
+    top: 100%;
+    bottom: auto;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+  }
+  
+  .dark-mode .tooltip-left::before, 
+  .dark-mode .tooltip-right::before {
+    border-left-color: transparent;
+    border-right-color: transparent;
+    border-top-color: #1a1a1a;
+  }
 }
 
 /* Tag input */
@@ -1352,7 +1515,7 @@ button {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: fadeIn 0.2s ease;
+  animation: modalFadeIn 0.2s ease;
   backdrop-filter: blur(2px);
 }
 
@@ -1366,7 +1529,10 @@ button {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  animation: slideUp 0.3s ease;
+  animation: modalSlideUp 0.3s ease;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
 }
 
 .dark-mode .settings-modal {
@@ -1393,31 +1559,14 @@ button {
   color: var(--text-color);
 }
 
-.close-button {
-  background: none !important;
-  border: none !important;
-  cursor: pointer !important;
-  width: 36px !important;
-  height: 36px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: 50% !important;
+/* Settings modal close button */
+.settings-modal-header .close-button {
+  margin-left: 12px;
 }
 
-.close-button svg {
-  fill: none !important;
-  stroke: #000000 !important; 
-  stroke-width: 2 !important;
-  width: 24px !important;
-  height: 24px !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-.dark-mode .close-button svg {
-  stroke: #ffffff !important;
+.settings-modal-header .close-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
 /* Settings Modal Content */
@@ -1437,6 +1586,51 @@ button {
 
 .dark-mode .settings-modal-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Animations for tooltip with separate keyframes to avoid conflicts */
+@keyframes fadeInTooltip {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Specific animation for horizontal tooltips */
+.tooltip-left, .tooltip-right {
+  animation: fadeInHorizontalTooltip 0.2s ease forwards;
+}
+
+@keyframes fadeInHorizontalTooltip {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal animations */
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Content Summary styles */
@@ -1531,10 +1725,6 @@ button {
     color: var(--text-color);
   }
   
-  .close-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
   .settings-modal-footer {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
@@ -1582,16 +1772,47 @@ button {
 @media (max-width: 768px) {
   .settings-modal {
     width: 95%;
-    max-height: 95vh;
+    max-height: 85vh;
+    margin: 0 auto;
+    border-radius: 10px;
   }
   
   .settings-modal-content {
     padding: 1rem;
+    max-height: calc(85vh - 130px);
   }
   
   .settings-modal-header,
   .settings-modal-footer {
-    padding: 1rem;
+    padding: 0.875rem 1rem;
+  }
+  
+  .settings-modal-header h2 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .settings-modal {
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  .settings-modal-overlay {
+    padding: 0;
+  }
+  
+  .settings-modal-content {
+    max-height: calc(100vh - 120px);
+  }
+  
+  .settings-tabs button {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -1940,14 +2161,7 @@ button {
 /* Dark mode toggle and settings buttons */
 .dark-mode-toggle svg, 
 .settings-button svg {
-  fill: none !important;
-  stroke: #000000 !important; 
-  stroke-width: 2 !important;
-  width: 24px !important;
-  height: 24px !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  /* Removed conflicting styles */
 }
 
 .dark-mode .dark-mode-toggle,
@@ -1961,28 +2175,17 @@ button {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Fix SVG icon visibility */
-.icon-button svg {
-  width: 20px;
-  height: 20px;
-  stroke: #4b5563;
-  fill: none;
-  display: block;
-}
-
+/* Fix SVG icon visibility - updated to use our new .icon-svg class */
 .settings-button svg,
 .dark-mode-toggle svg,
 .close-button svg {
-  color: #4b5563;
-  stroke: #4b5563;
-  stroke-width: 2;
+  /* Removed conflicting styles */
 }
 
 .dark-mode .settings-button svg,
 .dark-mode .dark-mode-toggle svg,
 .dark-mode .close-button svg {
-  stroke: #94a3b8;
-  color: #94a3b8;
+  /* Removed conflicting styles */
 }
 
 /* Make the drop zone icon smaller */
@@ -1999,3 +2202,165 @@ button {
   height: 16px;
   stroke-width: 1.75;
 }
+
+/* Custom tooltip for IconButton component */
+.custom-tooltip {
+  position: absolute;
+  background-color: #333;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 100;
+  max-width: 200px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  animation: fadeInTooltip 0.2s ease forwards;
+}
+
+.dark-mode .custom-tooltip {
+  background-color: #1a1a1a;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Position variations */
+.tooltip-bottom {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tooltip-bottom::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: #333;
+}
+
+.dark-mode .tooltip-bottom::before {
+  border-bottom-color: #1a1a1a;
+}
+
+.tooltip-top {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tooltip-top::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #333;
+}
+
+.dark-mode .tooltip-top::before {
+  border-top-color: #1a1a1a;
+}
+
+.tooltip-right {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tooltip-right::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: #333;
+}
+
+.dark-mode .tooltip-right::before {
+  border-right-color: #1a1a1a;
+}
+
+.tooltip-left {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tooltip-left::before {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: #333;
+}
+
+.dark-mode .tooltip-left::before {
+  border-left-color: #1a1a1a;
+}
+
+/* Handle edge cases for tooltips close to window edges */
+@media (max-width: 768px) {
+  .tooltip-left, .tooltip-right {
+    bottom: calc(100% + 8px);
+    top: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+  
+  .tooltip-left::before, .tooltip-right::before {
+    left: 50%;
+    right: auto;
+    top: 100%;
+    bottom: auto;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+  }
+  
+  .dark-mode .tooltip-left::before, 
+  .dark-mode .tooltip-right::before {
+    border-left-color: transparent;
+    border-right-color: transparent;
+    border-top-color: #1a1a1a;
+  }
+}
+
+@keyframes fadeInTooltip {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Adjust animations for horizontal tooltips */
+.tooltip-left, .tooltip-right {
+  animation: fadeInHorizontalTooltip 0.2s ease forwards;
+}
+
+@keyframes fadeInHorizontalTooltip {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* We can now remove the old tooltip styles */
+.icon-button[title]:hover::after,
+.icon-button[title]:hover::before {
+  display: none;
+}
+

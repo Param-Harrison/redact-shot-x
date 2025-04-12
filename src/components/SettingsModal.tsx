@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SettingsTabs from './SettingsTabs';
+import IconButton from './IconButton';
 
 // Define the types for enabled redaction types
 export type EnabledTypesRecord = {
@@ -181,17 +182,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // Add function to position tooltips intelligently
   const getTooltipPosition = (tooltipId: string) => {
     const element = document.getElementById(`tooltip-trigger-${tooltipId}`);
-    if (!element) return 'right-aligned';
+    if (!element) return 'center-aligned';
     
     const rect = element.getBoundingClientRect();
     const windowWidth = window.innerWidth;
     
-    // If the element is in the left half of the screen, align to left
-    // otherwise align to right
-    if (rect.left < windowWidth / 2) {
+    // More sophisticated positioning:
+    // - If near left edge (first 25% of screen): left-aligned
+    // - If near right edge (last 25% of screen): right-aligned
+    // - If in middle: center-aligned
+    if (rect.left < windowWidth * 0.25) {
       return 'left-aligned';
-    } else {
+    } else if (rect.left > windowWidth * 0.75) {
       return 'right-aligned';
+    } else {
+      return 'center-aligned';
     }
   };
 
@@ -214,12 +219,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className={`settings-modal ${darkMode ? 'dark-mode' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="settings-modal-header">
           <h2>Redaction Settings</h2>
-          <button className="icon-button close-button" onClick={closeSettings} aria-label="Close settings">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <IconButton 
+            onClick={closeSettings} 
+            ariaLabel="Close settings"
+            className="close-button"
+            title="Close settings panel"
+            tooltipPosition="left"
+          >
+            <svg className="icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
-          </button>
+          </IconButton>
         </div>
         
         <div className="settings-modal-content">
