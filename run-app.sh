@@ -8,8 +8,6 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# ────────────────────────────────────────────────────────────────────────────────
-# Cleanup function to kill background process
 cleanup() {
   echo -e "\n${YELLOW}🧹 Cleaning up background processes...${NC}"
   if [ -n "$PYTHON_PID" ]; then
@@ -38,7 +36,6 @@ for cmd in python3.11 python3.10 python3.9 python3.8 python3; do
     version=$($cmd -c 'import sys; print(sys.version_info.major * 100 + sys.version_info.minor)')
     if [ "$version" -ge 308 ]; then
       PYTHON_CMD=$cmd
-      echo -e "${GREEN}✔ Using Python: $($PYTHON_CMD --version)${NC}"
       break
     fi
   fi
@@ -49,18 +46,31 @@ if [ -z "$PYTHON_CMD" ]; then
   exit 1
 fi
 
+PYTHON_VERSION=$($PYTHON_CMD -c "import platform; print(platform.python_version())")
+echo -e "${GREEN}✔ Using Python: $PYTHON_CMD ($PYTHON_VERSION)${NC}"
+
 # ────────────────────────────────────────────────────────────────────────────────
-# Prepare Python virtual environment
+# Create or repair virtual environment
 if [ ! -d "venv" ]; then
-  echo -e "${YELLOW}📦 Creating virtual environment...${NC}"
+  echo -e "${YELLOW}📦 Creating new virtual environment...${NC}"
   $PYTHON_CMD -m venv venv
+else
+  # Validate the Python version inside venv
+  VENV_PYTHON_VERSION=$(venv/bin/python -c "import platform; print(platform.python_version())" || echo "0")
+  if [[ "$VENV_PYTHON_VERSION" != "$PYTHON_VERSION" ]]; then
+    echo -e "${YELLOW}⚠ Detected venv mismatch: $VENV_PYTHON_VERSION ≠ $PYTHON_VERSION. Recreating venv...${NC}"
+    rm -rf venv
+    $PYTHON_CMD -m venv venv
+  fi
 fi
 
+# ────────────────────────────────────────────────────────────────────────────────
 echo -e "${YELLOW}📦 Activating virtual environment...${NC}"
 source venv/bin/activate
+echo -e "${GREEN}✔ Python in venv: $(python --version) ($(which python))${NC}"
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Python backend (src-python)
+# Python backend
 if [ ! -d "src-python" ]; then
   echo -e "${RED}❌ src-python directory missing. Please check your project layout.${NC}"
   exit 1
