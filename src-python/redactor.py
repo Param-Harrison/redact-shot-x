@@ -14,7 +14,7 @@ from io import BytesIO
 import logging
 
 # Image processing
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 # Microsoft Presidio for PII detection
 try:

@@ -48,3 +48,6 @@ var/
 # PyInstaller
 src-python/dist/
 src-python/build/
+
+# venv
+venv/
