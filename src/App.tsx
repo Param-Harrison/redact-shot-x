@@ -51,7 +51,7 @@ function App() {
   const [isDicomImage, setIsDicomImage] = useState<boolean>(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-
+  
   // Updated PII types based on Microsoft Presidio's supported entities
   const [enabledTypes, setEnabledTypes] = useState<EnabledTypesRecord>({
     // Common PII types
@@ -60,15 +60,15 @@ function App() {
     PHONE_NUMBER: true,
     CREDIT_CARD: true,
     US_SSN: true,
-
+    
     // Location entities
     LOCATION: true,
     ADDRESS: true,
-
+    
     // Financial
     IBAN_CODE: true,
     US_BANK_NUMBER: true,
-
+    
     // Identification
     US_DRIVER_LICENSE: true,
     US_PASSPORT: true,
@@ -76,19 +76,19 @@ function App() {
 
     // Date & Time
     DATE_TIME: true,
-
+    
     // Advanced (disabled by default)
     IP_ADDRESS: false,
     DOMAIN_NAME: false,
     URL: false,
     NRP: false, // National Provider Identifier
     MEDICAL_LICENSE: false,
-
+    
     // Custom
     CUSTOM_REGEX: false,
     DENY_LIST: false,
   });
-
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropAreaRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -131,7 +131,7 @@ function App() {
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-
+    
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       handleImageFile(file);
@@ -168,7 +168,7 @@ function App() {
       if (e.target && typeof e.target.result === 'string') {
         setImage(e.target.result);
         processImage(e.target.result);
-
+        
         // Ensure content is scrolled to top when new image is loaded
         window.scrollTo(0, 0);
       }
@@ -179,18 +179,18 @@ function App() {
   // Process image with redaction
   const processImage = async (imageData: string) => {
     setIsProcessing(true);
-
+    
     try {
       // In a real implementation, this would call the Tauri backend for OCR and redaction
       // For now, we'll simulate processing with a timeout
-
+      
       setTimeout(() => {
         // Simulate redacted image (in real app this would come from backend)
         setRedactedImage(imageData); // Using same image for demo
         setRedactionCount(Math.floor(Math.random() * 8) + 1); // Random count for demo
         setIsProcessing(false);
       }, 1500);
-
+      
       // Real implementation would be:
       // const result = await invoke("process_image", { 
       //   imageData, 
@@ -330,12 +330,12 @@ function App() {
             handleDrop={handleDrop}
             handleFileSelect={handleFileSelect}
           />
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleInputChange}
-            accept="image/*,.dcm"
-            style={{ display: 'none' }}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleInputChange} 
+            accept="image/*,.dcm" 
+            style={{ display: 'none' }} 
           />
         </>
       ) : (
