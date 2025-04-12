@@ -67,6 +67,15 @@ html, body {
   z-index: 10;
 }
 
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .app-header h1 {
   font-size: clamp(1.5rem, 5vw, 2.25rem);
   font-weight: 700;
@@ -76,6 +85,25 @@ html, body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.02em;
+}
+
+.settings-button {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.settings-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--primary-color);
 }
 
 .tagline {
@@ -647,17 +675,17 @@ button {
 
 /* Alert Box */
 .alert-box {
-  background-color: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
+  background-color: rgba(255, 107, 107, 0.05);
+  border: 1px solid rgba(255, 107, 107, 0.2);
   border-radius: 8px;
   padding: 1rem;
-  margin-top: 1rem;
 }
 
 .alert-box h4 {
   color: var(--error-color);
   margin-bottom: 0.5rem;
   font-weight: 600;
+  font-size: 1rem;
 }
 
 .alert-box p {
@@ -771,4 +799,599 @@ button {
     background-color: rgba(255, 107, 107, 0.05);
     border-color: rgba(255, 107, 107, 0.2);
   }
+
+  /* Dark mode for the new UI elements */
+  .setting-card {
+    background-color: #2c2c2c;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .setting-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .setting-header h3 {
+    color: #e0e0e0;
+  }
+  
+  .info-icon {
+    background-color: rgba(77, 148, 255, 0.2);
+  }
+  
+  .tooltip {
+    background-color: #1a1a1a;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  .tooltip::after {
+    border-top: 8px solid #1a1a1a;
+  }
+  
+  .tag-input-wrapper {
+    background-color: #2c2c2c;
+    border-color: #444;
+  }
+  
+  .tag {
+    background-color: rgba(77, 148, 255, 0.2);
+  }
+  
+  .deny-tag {
+    background-color: rgba(255, 107, 107, 0.15);
+  }
+  
+  .tag-input {
+    color: var(--text-color);
+  }
+  
+  .tag-add-button:disabled {
+    background-color: #3a3a3a;
+    color: #666;
+  }
+  
+  .custom-regex-input {
+    background-color: #2c2c2c;
+    border-color: #444;
+    color: var(--text-color);
+  }
+  
+  .toggle-slider {
+    background-color: #444;
+  }
+  
+  .toggle-slider:after {
+    background-color: #ccc;
+  }
+  
+  .elegant-toggle span {
+    color: #e0e0e0;
+  }
+}
+
+/* Settings layout */
+.settings-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.additional-pii {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Updated single column layout styles */
+.redaction-options,
+.advanced-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.setting-card {
+  background-color: white;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.setting-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+}
+
+.setting-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.setting-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: #4b5563;
+}
+
+.info-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(58, 134, 255, 0.1);
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  top: -10px;
+  right: 0;
+  transform: translateY(-100%);
+  background-color: #333;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  width: 220px;
+  max-width: 100%;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 8px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #333;
+}
+
+/* Tag input */
+.tag-input-container {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.tag-input-wrapper {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.5rem;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.tag-input-wrapper:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.1);
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  background-color: rgba(58, 134, 255, 0.1);
+  color: var(--primary-color);
+  border-radius: 99px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.deny-tag {
+  background-color: rgba(255, 107, 107, 0.1);
+  color: var(--error-color);
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tag-input {
+  flex: 1;
+  min-width: 120px;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  font-family: inherit;
+  padding: 0.3rem;
+  background: transparent;
+}
+
+.tag-add-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: stretch;
+  font-size: 0.9rem;
+}
+
+.tag-add-button:disabled {
+  background-color: #c2d2e9;
+  cursor: not-allowed;
+}
+
+.tag-add-button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.custom-input-container {
+  width: 100%;
+}
+
+.custom-regex-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: monospace;
+  color: var(--text-color);
+  transition: all 0.2s ease;
+}
+
+.custom-regex-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.1);
+}
+
+/* Elegant toggle switches */
+.elegant-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.elegant-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background-color: #e5e7eb;
+  border-radius: 20px;
+  transition: all 0.2s ease-in-out;
+}
+
+.toggle-slider:after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.elegant-toggle input:checked + .toggle-slider {
+  background-color: var(--primary-color);
+}
+
+.elegant-toggle input:checked + .toggle-slider:after {
+  transform: translateX(16px);
+}
+
+.elegant-toggle input:focus + .toggle-slider {
+  box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.1);
+}
+
+.elegant-toggle span {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.pii-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Media queries for responsive design */
+@media (min-width: 768px) {
+  .settings-layout {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .settings-section {
+    flex: 1;
+    min-width: 280px;
+  }
+  
+  .additional-pii {
+    flex: 2;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    align-content: start;
+  }
+}
+
+/* Settings Modal Overlay */
+.settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+  backdrop-filter: blur(2px);
+}
+
+/* Settings Modal */
+.settings-modal {
+  background-color: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 90vh;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Settings Modal Header */
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.settings-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-light);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.close-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--text-color);
+}
+
+/* Settings Modal Content */
+.settings-modal-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(90vh - 150px);
+}
+
+/* Settings Modal Footer */
+.settings-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* New content summary styles */
+.content-summary {
+  margin: 1.5rem 0;
+}
+
+.redaction-summary {
+  background-color: rgba(66, 184, 131, 0.08);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.redaction-summary p {
+  margin: 0.5rem 0;
+  color: var(--text-color);
+}
+
+.redaction-count {
+  font-weight: 600;
+  color: var(--success-color);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.5rem;
+  text-decoration: underline;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.link-button:hover {
+  color: var(--primary-hover);
+}
+
+/* Dark mode support for new elements */
+@media (prefers-color-scheme: dark) {
+  .settings-button {
+    color: var(--text-light);
+  }
+  
+  .settings-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--primary-color);
+  }
+  
+  .settings-modal {
+    background-color: #1e1e1e;
+  }
+  
+  .settings-modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .settings-modal-header h2 {
+    color: var(--text-color);
+  }
+  
+  .close-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .settings-modal-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .redaction-summary {
+    background-color: rgba(66, 184, 131, 0.06);
+  }
+  
+  .link-button {
+    color: var(--primary-color);
+  }
+  
+  .link-button:hover {
+    color: var(--primary-hover);
+  }
+}
+
+/* Make all setting cards in the modal more minimal */
+.settings-modal .setting-card {
+  box-shadow: none;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-modal .setting-card:last-child {
+  border-bottom: none;
+}
+
+.settings-modal .setting-card:hover {
+  box-shadow: none;
+}
+
+.settings-modal .setting-header {
+  margin-bottom: 0.75rem;
+}
+
+.settings-modal .redaction-options,
+.settings-modal .advanced-options {
+  gap: 0;
+}
+
+/* Responsive adjustments for settings modal */
+@media (max-width: 768px) {
+  .settings-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .settings-modal-content {
+    padding: 1rem;
+  }
+  
+  .settings-modal-header,
+  .settings-modal-footer {
+    padding: 1rem;
+  }
+}
+
+/* Keep boxes for special inputs like tags and regex */
+.settings-modal .tag-input-wrapper,
+.settings-modal .custom-input-container input {
+  border: 1px solid #d1d5db;
+  background-color: white;
+}
+
+/* Make settings panel in modal cleaner */
+.settings-modal .settings-panel {
+  display: block;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
