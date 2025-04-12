@@ -1644,6 +1644,7 @@ button {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: flex-end;
+  gap: 12px; /* Add spacing between buttons */
 }
 
 .dark-mode .settings-modal-footer {
@@ -2752,6 +2753,44 @@ button {
   .drop-area p {
     font-size: 0.8rem;
     margin-bottom: 0.25rem;
+  }
+}
+
+/* Toast Notification Styling */
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #10b981;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  animation: toastSlideUp 0.3s ease;
+  max-width: 300px;
+  min-width: 200px;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast-content svg {
+  flex-shrink: 0;
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 }
 

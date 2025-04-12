@@ -1,6 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SettingsTabs from './SettingsTabs';
 import IconButton from './IconButton';
+
+// Simple Toast notification component
+const Toast = ({ message, visible, onClose }: { message: string; visible: boolean; onClose: () => void }) => {
+  useEffect(() => {
+    if (visible) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3000); // Auto-hide after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [visible, onClose]);
+  
+  if (!visible) return null;
+  
+  return (
+    <div className="toast-notification">
+      <div className="toast-content">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span>{message}</span>
+      </div>
+    </div>
+  );
+};
 
 // Define the types for enabled redaction types
 export type EnabledTypesRecord = {
@@ -197,6 +224,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   setSelectedTab,
   darkMode = false
 }) => {
+  const [toastVisible, setToastVisible] = useState(false);
+  
   // Add function to position tooltips intelligently
   const getTooltipPosition = (tooltipId: string) => {
     const element = document.getElementById(`tooltip-trigger-${tooltipId}`);
@@ -250,6 +279,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (removeCustomRegex) {
       handleBackspaceDelete(e, customRegexes, regexPatternInput, removeCustomRegex);
     }
+  };
+
+  // Handle save and close with toast notification
+  const handleSaveAndClose = () => {
+    setToastVisible(true);
+    // Still call closeSettings but with a slight delay to show toast
+    setTimeout(() => {
+      closeSettings();
+    }, 1000);
   };
 
   if (!isOpen) return null;
@@ -644,7 +682,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
         
         <div className="settings-modal-footer">
-          <button className="primary-button" onClick={closeSettings}>
+          <button className="secondary-button" onClick={closeSettings}>
+            Close
+          </button>
+          <button className="primary-button" onClick={handleSaveAndClose}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
               <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -654,6 +695,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
       </div>
+      
+      <Toast 
+        message="Settings saved successfully!" 
+        visible={toastVisible} 
+        onClose={() => setToastVisible(false)} 
+      />
     </div>
   );
 };
