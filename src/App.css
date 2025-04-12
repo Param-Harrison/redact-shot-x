@@ -8,13 +8,13 @@
 
 /* Base/Root styles */
 :root {
-  --primary-color: #3a86ff;
-  --primary-hover: #2b6dd4;
-  --secondary-color: #f0f4f8;
+  --primary-color: #10b981; /* Emerald green */
+  --primary-hover: #059669;
+  --secondary-color: #f0f9f5;
   --text-color: #333;
   --text-light: #6e7c87;
-  --success-color: #42b883;
-  --error-color: #ff6b6b;
+  --success-color: #10b981;
+  --error-color: #ef4444;
   --border-radius: 12px;
   --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.08);
@@ -28,6 +28,20 @@
   background-color: var(--secondary-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark Mode */
+.dark-mode {
+  --primary-color: #34d399; /* Slightly lighter emerald for dark mode */
+  --primary-hover: #10b981;
+  --secondary-color: #0f172a; /* Dark slate */
+  --text-color: #f1f5f9;
+  --text-light: #94a3b8;
+  --success-color: #34d399;
+  --error-color: #f87171;
+  
+  background-color: var(--secondary-color);
+  color: var(--text-color);
 }
 
 * {
@@ -54,12 +68,16 @@ html, body {
   margin: 0 auto;
   background-color: white;
   position: relative;
+  padding: 0 clamp(0.5rem, 3vw, 1.5rem);
+}
+
+.dark-mode .app-container {
+  background-color: #1e293b; /* Dark slate */
 }
 
 /* Header */
 .app-header {
-  text-align: center;
-  padding: 1.25rem 1rem;
+  padding: 1.25rem 1.5rem;
   background: white;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   position: sticky;
@@ -67,49 +85,138 @@ html, body {
   z-index: 10;
 }
 
+.dark-mode .app-header {
+  background-color: #1e293b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .header-content {
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
+  justify-content: space-between;
   max-width: 1200px;
   margin: 0 auto;
 }
 
+.app-branding {
+  text-align: left;
+  max-width: 600px;
+  padding-right: 1rem;
+}
+
 .app-header h1 {
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
   font-weight: 700;
-  margin-bottom: 0.5rem;
-  background: linear-gradient(to right, var(--primary-color), #4361ee);
+  margin-bottom: 0.25rem;
+  background: linear-gradient(to right, var(--primary-color), #34d399);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.02em;
-}
-
-.settings-button {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--text-light);
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 50%;
-  transition: var(--transition);
-}
-
-.settings-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--primary-color);
+  line-height: 1.2;
 }
 
 .tagline {
   color: var(--text-light);
-  font-size: clamp(0.875rem, 3vw, 1rem);
+  font-size: clamp(0.8rem, 2.5vw, 0.9rem);
   font-weight: 400;
+  letter-spacing: 0.01em;
+  max-width: 500px;
+  line-height: 1.4;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.icon-button {
+  background: none !important;
+  border: none !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  cursor: pointer !important;
+  overflow: visible !important;
+}
+
+.icon-button:hover {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Ensure icons are visible */
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: #4b5563;
+  fill: none;
+  display: block;
+}
+
+.dark-mode .icon-button {
+  color: #94a3b8;
+}
+
+.dark-mode .icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--primary-color);
+}
+
+/* Data tooltip attribute */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  background-color: #333;
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 100;
+}
+
+[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  bottom: 100%;
+}
+
+.dark-mode [data-tooltip]::before {
+  background-color: #64748b;
+}
+
+.dark-mode [data-tooltip]::after {
+  border-color: #64748b transparent transparent transparent;
 }
 
 /* Drop Area */
@@ -118,8 +225,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: clamp(1rem, 3vw, 2rem);
-  padding: clamp(1.5rem, 5vw, 3rem);
+  margin: clamp(1.5rem, 5vw, 2.5rem);
+  padding: clamp(2rem, 6vw, 4rem);
   border: 2px dashed #d1d5db;
   border-radius: var(--border-radius);
   background-color: #f9fafc;
@@ -128,14 +235,19 @@ html, body {
   min-height: 200px;
 }
 
+.dark-mode .drop-area {
+  background-color: #2d3748;
+  border-color: #4b5563;
+}
+
 .drop-area:hover {
   border-color: var(--primary-color);
-  background-color: #f5f8ff;
+  background-color: rgba(16, 185, 129, 0.05);
 }
 
 .drop-area.dragging {
   border-color: var(--primary-color);
-  background-color: #f0f7ff;
+  background-color: rgba(16, 185, 129, 0.1);
   box-shadow: var(--shadow-md);
 }
 
@@ -286,13 +398,9 @@ html, body {
 }
 
 .settings-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  padding: clamp(1rem, 3vw, 1.5rem);
-  background-color: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-sm);
+  display: block;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .setting-group {
@@ -317,6 +425,13 @@ html, body {
   padding: 0.25rem;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 220px;
+}
+
+.dark-mode .toggle-buttons {
+  background-color: #334155;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .toggle-buttons button {
@@ -338,7 +453,7 @@ html, body {
 .toggle-buttons button.active {
   background-color: var(--primary-color);
   color: white;
-  box-shadow: 0 2px 8px rgba(58, 134, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
 }
 
 .toggle-options {
@@ -422,12 +537,24 @@ button {
 .primary-button {
   background-color: var(--primary-color);
   color: white;
-  box-shadow: 0 2px 8px rgba(58, 134, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.primary-button svg {
+  width: 18px;
+  height: 18px;
 }
 
 .primary-button:hover {
   background-color: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(58, 134, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
   transform: translateY(-2px);
 }
 
@@ -462,6 +589,12 @@ button {
   position: sticky;
   bottom: 0;
   z-index: 5;
+}
+
+.dark-mode .app-footer {
+  background-color: #1e293b;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-light);
 }
 
 .footer-content {
@@ -578,15 +711,20 @@ button {
 /* Settings Panel Tabs */
 .settings-tabs {
   display: flex;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   padding-bottom: 0.25rem;
+  justify-content: center;
+}
+
+.dark-mode .settings-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .settings-tabs button {
   background: none;
   border: none;
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   font-weight: 600;
   font-size: 0.95rem;
   color: var(--text-light);
@@ -609,8 +747,8 @@ button {
   content: '';
   position: absolute;
   bottom: -0.25rem;
-  left: 0;
-  right: 0;
+  left: 0.75rem;
+  right: 0.75rem;
   height: 3px;
   background-color: var(--primary-color);
   border-radius: 3px 3px 0 0;
@@ -671,6 +809,7 @@ button {
   color: var(--text-light);
   margin-top: 0.5rem;
   font-style: italic;
+  padding-left: 0.5rem;
 }
 
 /* Alert Box */
@@ -930,22 +1069,32 @@ button {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background-color: rgba(58, 134, 255, 0.1);
+  background-color: rgba(16, 185, 129, 0.15);
   color: var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
   font-weight: bold;
-  margin-left: 0.5rem;
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.info-icon:hover {
+  background-color: rgba(16, 185, 129, 0.25);
+  transform: scale(1.05);
+}
+
+.dark-mode .info-icon {
+  background-color: rgba(52, 211, 153, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Tooltip */
 .tooltip {
   position: absolute;
   top: -10px;
-  right: 0;
   transform: translateY(-100%);
   background-color: #333;
   color: white;
@@ -959,16 +1108,36 @@ button {
   animation: fadeIn 0.2s ease;
 }
 
+/* Adjust tooltip position based on window edge */
+.tooltip.left-aligned {
+  right: auto;
+  left: 0;
+}
+
+.tooltip.right-aligned {
+  right: 0;
+  left: auto;
+}
+
 .tooltip::after {
   content: '';
   position: absolute;
   bottom: -8px;
-  right: 8px;
   width: 0;
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
   border-top: 8px solid #333;
+}
+
+.tooltip.left-aligned::after {
+  left: 15px;
+  right: auto;
+}
+
+.tooltip.right-aligned::after {
+  right: 15px;
+  left: auto;
 }
 
 /* Tag input */
@@ -1101,38 +1270,43 @@ button {
 }
 
 .toggle-slider {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: #e5e7eb;
-  border-radius: 20px;
-  transition: all 0.2s ease-in-out;
+  transition: 0.3s;
+  border-radius: 28px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.toggle-slider:after {
-  content: '';
+.toggle-slider:before {
   position: absolute;
-  left: 2px;
-  top: 2px;
-  width: 16px;
-  height: 16px;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
   background-color: white;
+  transition: 0.3s;
   border-radius: 50%;
-  transition: all 0.2s ease-in-out;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .elegant-toggle input:checked + .toggle-slider {
   background-color: var(--primary-color);
 }
 
-.elegant-toggle input:checked + .toggle-slider:after {
-  transform: translateX(16px);
+.elegant-toggle input:focus + .toggle-slider {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
-.elegant-toggle input:focus + .toggle-slider {
-  box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.1);
+.elegant-toggle input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+  background-color: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 .elegant-toggle span {
@@ -1195,15 +1369,8 @@ button {
   animation: slideUp 0.3s ease;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.dark-mode .settings-modal {
+  background-color: #1e293b;
 }
 
 /* Settings Modal Header */
@@ -1215,6 +1382,10 @@ button {
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+.dark-mode .settings-modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .settings-modal-header h2 {
   margin: 0;
   font-size: 1.5rem;
@@ -1223,22 +1394,30 @@ button {
 }
 
 .close-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-light);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
 }
 
-.close-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--text-color);
+.close-button svg {
+  fill: none !important;
+  stroke: #000000 !important; 
+  stroke-width: 2 !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.dark-mode .close-button svg {
+  stroke: #ffffff !important;
 }
 
 /* Settings Modal Content */
@@ -1256,26 +1435,44 @@ button {
   justify-content: flex-end;
 }
 
-/* New content summary styles */
+.dark-mode .settings-modal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Content Summary styles */
 .content-summary {
   margin: 1.5rem 0;
+  display: flex;
+  justify-content: center;
 }
 
 .redaction-summary {
-  background-color: rgba(66, 184, 131, 0.08);
-  border-radius: 8px;
-  padding: 1rem;
+  background-color: rgba(16, 185, 129, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
   text-align: center;
+  max-width: 400px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dark-mode .redaction-summary {
+  background-color: rgba(52, 211, 153, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .redaction-summary p {
-  margin: 0.5rem 0;
+  margin: 0;
   color: var(--text-color);
+  font-size: 0.95rem;
 }
 
 .redaction-count {
   font-weight: 600;
   color: var(--success-color);
+  font-size: 1.1rem;
 }
 
 .link-button {
@@ -1285,13 +1482,30 @@ button {
   font-weight: 500;
   cursor: pointer;
   padding: 0.5rem;
-  text-decoration: underline;
-  font-size: 0.9rem;
   transition: var(--transition);
+  margin-top: 0.5rem;
+  text-decoration: none;
+  position: relative;
+  display: inline-block;
+}
+
+.link-button::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  bottom: 0.4rem;
+  left: 0;
+  background-color: var(--primary-color);
+  opacity: 0.5;
 }
 
 .link-button:hover {
   color: var(--primary-hover);
+}
+
+.link-button:hover::after {
+  background-color: var(--primary-hover);
 }
 
 /* Dark mode support for new elements */
@@ -1306,7 +1520,7 @@ button {
   }
   
   .settings-modal {
-    background-color: #1e1e1e;
+    background-color: #1e293b;
   }
   
   .settings-modal-header {
@@ -1326,7 +1540,7 @@ button {
   }
   
   .redaction-summary {
-    background-color: rgba(66, 184, 131, 0.06);
+    background-color: rgba(52, 211, 153, 0.06);
   }
   
   .link-button {
@@ -1394,4 +1608,394 @@ button {
   background: transparent;
   box-shadow: none;
   padding: 0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .setting-item-control {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .toggle-buttons {
+    max-width: 100%;
+  }
+  
+  .settings-modal {
+    width: 95%;
+    max-height: 85vh;
+    margin: 0 auto;
+  }
+  
+  .settings-modal-content {
+    padding: 1rem;
+  }
+  
+  /* Fix tooltip positioning on mobile */
+  .tooltip {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 85%;
+    max-width: 300px;
+  }
+  
+  .tooltip::after {
+    display: none;
+  }
+}
+
+/* Setting Item component styling - improved */
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  gap: 1.5rem;
+  background-color: rgba(248, 250, 252, 0.5);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.setting-item:hover {
+  background-color: rgba(248, 250, 252, 0.9);
+}
+
+.dark-mode .setting-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+.dark-mode .setting-item:hover {
+  background-color: rgba(30, 41, 59, 0.8);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-item-text {
+  flex: 1;
+  padding-right: 1rem;
+}
+
+.setting-item-text h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: var(--text-color);
+}
+
+.setting-item-text p {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.setting-item-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 120px;
+}
+
+/* Settings section title */
+.settings-section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin: 1.5rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.dark-mode .settings-section-title {
+  border-bottom: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+/* Setting item actions container */
+.setting-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Tooltip container */
+.tooltip-container {
+  position: relative;
+}
+
+/* Info icon with improved styling */
+.info-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.info-icon:hover {
+  background-color: rgba(16, 185, 129, 0.25);
+  transform: scale(1.05);
+}
+
+.dark-mode .info-icon {
+  background-color: rgba(52, 211, 153, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Settings tabs with improved styling */
+.settings-tabs {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 0.25rem;
+  justify-content: center;
+}
+
+.dark-mode .settings-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-tabs button {
+  background: none;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-light);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  margin-right: 0.5rem;
+  border-radius: 8px 8px 0 0;
+}
+
+.settings-tabs button:hover {
+  color: var(--primary-color);
+}
+
+.settings-tabs button.tab-active {
+  color: var(--primary-color);
+}
+
+.settings-tabs button.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.25rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 3px;
+  background-color: var(--primary-color);
+  border-radius: 3px 3px 0 0;
+}
+
+/* Input hint with improved styling */
+.input-hint {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 0.5rem;
+  font-style: italic;
+  padding-left: 0.5rem;
+}
+
+/* Make the settings modal content more spacious */
+.settings-modal-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(90vh - 150px);
+}
+
+/* Make the settings panel look better */
+.settings-panel {
+  display: block;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Fix spacing for section titles */
+.settings-section-title {
+  margin-top: 2rem;
+}
+
+.settings-section-title:first-child {
+  margin-top: 0.5rem;
+}
+
+/* Complete fix for toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  margin: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+  visibility: hidden;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e7eb;
+  transition: 0.3s;
+  border-radius: 28px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--primary-color);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+/* Upload button styling */
+.upload-button {
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.upload-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.dark-mode .upload-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.dark-mode .upload-button:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Dark mode toggle and settings buttons */
+.dark-mode-toggle svg, 
+.settings-button svg {
+  fill: none !important;
+  stroke: #000000 !important; 
+  stroke-width: 2 !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.dark-mode .dark-mode-toggle,
+.dark-mode .settings-button {
+  color: #94a3b8;
+}
+
+.dark-mode .dark-mode-toggle:hover,
+.dark-mode .settings-button:hover {
+  color: var(--primary-color);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Fix SVG icon visibility */
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: #4b5563;
+  fill: none;
+  display: block;
+}
+
+.settings-button svg,
+.dark-mode-toggle svg,
+.close-button svg {
+  color: #4b5563;
+  stroke: #4b5563;
+  stroke-width: 2;
+}
+
+.dark-mode .settings-button svg,
+.dark-mode .dark-mode-toggle svg,
+.dark-mode .close-button svg {
+  stroke: #94a3b8;
+  color: #94a3b8;
+}
+
+/* Make the drop zone icon smaller */
+.drop-icon svg {
+  width: 48px;
+  height: 48px;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+/* Make the upload button icon smaller */
+.upload-button svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.75;
 }

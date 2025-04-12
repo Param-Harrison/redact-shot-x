@@ -1,35 +1,33 @@
 import { useState, useRef, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import DropZone from "./components/DropZone";
 import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
-import SettingsModal from "./components/SettingsModal";
+import SettingsModal, { EnabledTypesRecord as SettingsEnabledTypesRecord } from "./components/SettingsModal";
 
 // Define the type of enabledTypes for improved type safety
+// This is adjusted to match SettingsModal's EnabledTypesRecord type
 type EnabledTypesRecord = {
   PERSON: boolean;
   EMAIL_ADDRESS: boolean;
   PHONE_NUMBER: boolean;
-  CREDIT_CARD: boolean;
-  US_SSN: boolean;
-  LOCATION: boolean;
-  ADDRESS: boolean;
-  IBAN_CODE: boolean;
-  US_BANK_NUMBER: boolean;
-  US_DRIVER_LICENSE: boolean;
-  US_PASSPORT: boolean;
-  US_ITIN: boolean;
-  DATE_TIME: boolean;
-  IP_ADDRESS: boolean;
-  DOMAIN_NAME: boolean;
   URL: boolean;
-  NRP: boolean;
-  MEDICAL_LICENSE: boolean;
-  CUSTOM_REGEX: boolean;
-  DENY_LIST: boolean;
+  US_SSN: boolean;
+  US_ITIN: boolean;
+  US_PASSPORT: boolean;
+  CREDIT_CARD: boolean;
+  IBAN_CODE: boolean;
+  IP_ADDRESS: boolean;
+  MAC_ADDRESS: boolean;
+  US_BANK_ACCOUNT: boolean;
+  US_BANK_ROUTING: boolean;
+  STREET_ADDRESS: boolean;
+  ZIPCODE: boolean;
+  LOCATION: boolean;
+  DATE: boolean;
+  [key: string]: boolean;
 };
 
 function App() {
@@ -51,6 +49,7 @@ function App() {
   const [isDicomImage, setIsDicomImage] = useState<boolean>(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState<boolean>(false);
   
   // Updated PII types based on Microsoft Presidio's supported entities
   const [enabledTypes, setEnabledTypes] = useState<EnabledTypesRecord>({
@@ -63,11 +62,13 @@ function App() {
     
     // Location entities
     LOCATION: true,
-    ADDRESS: true,
+    STREET_ADDRESS: true, // Changed from ADDRESS to STREET_ADDRESS
+    ZIPCODE: false,
     
     // Financial
     IBAN_CODE: true,
-    US_BANK_NUMBER: true,
+    US_BANK_ACCOUNT: true, // Changed from US_BANK_NUMBER
+    US_BANK_ROUTING: false,
     
     // Identification
     US_DRIVER_LICENSE: true,
@@ -75,10 +76,11 @@ function App() {
     US_ITIN: true,
 
     // Date & Time
-    DATE_TIME: true,
+    DATE: true, // Changed from DATE_TIME
     
     // Advanced (disabled by default)
     IP_ADDRESS: false,
+    MAC_ADDRESS: false,
     DOMAIN_NAME: false,
     URL: false,
     NRP: false, // National Provider Identifier
@@ -237,10 +239,10 @@ function App() {
   };
 
   // Toggle redaction type
-  const toggleRedactionType = (type: keyof EnabledTypesRecord) => {
+  const toggleRedactionType = (type: keyof SettingsEnabledTypesRecord) => {
     setEnabledTypes(prev => ({
       ...prev,
-      [type]: !prev[type]
+      [type]: !prev[type as keyof EnabledTypesRecord]
     }));
   };
 
@@ -318,9 +320,20 @@ function App() {
     setIsSettingsOpen(false);
   };
 
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setDarkMode(prevDarkMode => !prevDarkMode);
+    // Apply dark mode class to body
+    if (!darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  };
+
   return (
-    <main className="app-container" style={{ minHeight: `${viewportHeight}px` }}>
-      <Header openSettings={openSettings} />
+    <main className={`app-container ${darkMode ? 'dark-mode' : ''}`} style={{ minHeight: `${viewportHeight}px` }}>
+      <Header openSettings={openSettings} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
       {!image ? (
         <>
@@ -414,6 +427,9 @@ function App() {
         tooltips={tooltips}
         selectedTab={selectedTab}
         setSelectedTab={setSelectedTab}
+        customRegexes={[]}
+        setCustomRegexes={() => {}}
+        darkMode={darkMode}
       />
     </main>
   );
