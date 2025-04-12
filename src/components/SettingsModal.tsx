@@ -275,27 +275,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="redaction-settings">
                 <h3 className="settings-section-title">Basic Options</h3>
                 
-                <SettingItem 
-                  title="Redaction Method" 
-                  description="Choose how sensitive information will be hidden in the image"
-                >
-                  <div className="toggle-buttons">
+                <div className="redaction-method-container">
+                  <div className="redaction-method-header">
+                    <h3>Redaction Method</h3>
+                    <p>Choose how sensitive information will be hidden in the image</p>
+                  </div>
+                  <div className="redaction-method-options">
                     <button 
-                      className={redactionMethod === "blur" ? "active" : ""}
+                      className={`redaction-method-option ${redactionMethod === "blur" ? "active" : ""}`}
                       onClick={() => setRedactionMethod("blur")}
                       aria-pressed={redactionMethod === "blur"}
                     >
                       Blur
                     </button>
                     <button 
-                      className={redactionMethod === "box" ? "active" : ""}
+                      className={`redaction-method-option ${redactionMethod === "box" ? "active" : ""}`}
                       onClick={() => setRedactionMethod("box")}
                       aria-pressed={redactionMethod === "box"}
                     >
                       Black Box
                     </button>
                   </div>
-                </SettingItem>
+                </div>
 
                 <SettingItem
                   title="Show Redaction Count"
@@ -316,7 +317,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* Common PII Types */}
                 <div className="pii-toggles">
                   {Object.keys(enabledTypes)
-                    .filter(type => !['IP_ADDRESS', 'DOMAIN_NAME', 'URL', 'NRP', 'MEDICAL_LICENSE', 'CUSTOM_REGEX', 'DENY_LIST', 'MAC_ADDRESS', 'US_BANK_ROUTING'].includes(type))
+                    .filter(type => !['IP_ADDRESS', 'DOMAIN_NAME', 'URL', 'NRP', 'MEDICAL_LICENSE', 'CUSTOM_REGEX', 'DENY_LIST', 'MAC_ADDRESS', 'US_BANK_ROUTING', 'ALLOW_LIST'].includes(type))
                     .map(type => (
                       <SettingItem
                         key={type}
