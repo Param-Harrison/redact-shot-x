@@ -21,6 +21,9 @@ export type EnabledTypesRecord = {
   ZIPCODE: boolean;
   LOCATION: boolean;
   DATE: boolean;
+  CUSTOM_REGEX: boolean;
+  DENY_LIST: boolean;
+  ALLOW_LIST: boolean;
   [key: string]: boolean;
 };
 
@@ -57,6 +60,13 @@ export interface SettingsModalProps {
   denyListInputRef: React.RefObject<HTMLInputElement>;
   regexPatternInputRef: React.RefObject<HTMLInputElement>;
   
+  // Custom regex related props
+  customRegexes: string[];
+  addCustomRegex?: () => void;
+  removeCustomRegex?: (regex: string) => void;
+  handleCustomRegexKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  setCustomRegexes: (val: string[]) => void;
+  
   // Common props
   activeTooltip: string | null;
   showTooltip: (tooltipId: string) => void;
@@ -64,8 +74,6 @@ export interface SettingsModalProps {
   tooltips: Record<string, string>;
   selectedTab: "redaction" | "advanced";
   setSelectedTab: (tab: "redaction" | "advanced") => void;
-  customRegexes: string[];
-  setCustomRegexes: (val: string[]) => void;
   darkMode?: boolean;
 }
 
@@ -152,10 +160,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   denyListTags,
   allowListInput,
   denyListInput,
+  regexPatternInput,
   useContextEnhancement,
   isDicomImage,
   setAllowListInput,
   setDenyListInput,
+  setRegexPatternInput,
   setUseContextEnhancement,
   addAllowListTag,
   addDenyListTag,
@@ -165,6 +175,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   handleDenyListKeyPress,
   allowListInputRef,
   denyListInputRef,
+  regexPatternInputRef,
+  customRegexes = [],
+  addCustomRegex,
+  removeCustomRegex,
+  handleCustomRegexKeyPress,
   activeTooltip,
   showTooltip,
   hideTooltip,
@@ -191,6 +206,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       return 'right-aligned';
     } else {
       return 'center-aligned';
+    }
+  };
+
+  // Handle backspace key for tag inputs
+  const handleBackspaceDelete = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    tags: string[],
+    inputValue: string,
+    removeTag: (tag: string) => void
+  ) => {
+    // Only process backspace if input is empty and there are tags
+    if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
+      // Remove the last tag
+      removeTag(tags[tags.length - 1]);
+    }
+  };
+
+  // Add handlers for each tag input type
+  const handleAllowListKeyPressWithBackspace = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    handleAllowListKeyPress(e);
+    handleBackspaceDelete(e, allowListTags, allowListInput, removeAllowListTag);
+  };
+
+  const handleDenyListKeyPressWithBackspace = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    handleDenyListKeyPress(e);
+    handleBackspaceDelete(e, denyListTags, denyListInput, removeDenyListTag);
+  };
+
+  const handleCustomRegexKeyPressWithBackspace = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (handleCustomRegexKeyPress) {
+      handleCustomRegexKeyPress(e);
+    }
+    if (removeCustomRegex) {
+      handleBackspaceDelete(e, customRegexes, regexPatternInput, removeCustomRegex);
     }
   };
 
@@ -417,50 +466,105 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </SettingItem>
                 
+                {enabledTypes.CUSTOM_REGEX && (
+                  <div className="setting-addon">
+                    <div className="tag-input-container">
+                      <div className="tag-input-wrapper">
+                        <div className="tag-list">
+                          {customRegexes.map((regex, index) => (
+                            <div key={index} className="tag regex-tag">
+                              <span>{regex}</span>
+                              <button 
+                                type="button" 
+                                onClick={() => removeCustomRegex && removeCustomRegex(regex)}
+                                className="tag-remove"
+                                aria-label={`Remove ${regex} from custom regex patterns`}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          <input
+                            type="text"
+                            ref={regexPatternInputRef}
+                            value={regexPatternInput}
+                            onChange={(e) => setRegexPatternInput(e.target.value)}
+                            onKeyDown={handleCustomRegexKeyPressWithBackspace}
+                            placeholder="Type regex pattern and press Enter..."
+                            className="tag-input"
+                          />
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={addCustomRegex}
+                        className="tag-add-button"
+                        disabled={!regexPatternInput.trim()}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <p className="input-hint">Enter valid regex patterns (e.g., \d{3}-\d{2}-\d{4} for SSN)</p>
+                  </div>
+                )}
+                
                 <div className="settings-section-title">Exemptions</div>
                 
                 <SettingItem
                   title="Allow List" 
                   description="Words in this list will never be redacted, even if they match a PII pattern"
                 >
-                  <div className="tag-input-container">
-                    <div className="tag-input-wrapper">
-                      <div className="tag-list">
-                        {allowListTags.map((tag, index) => (
-                          <div key={index} className="tag">
-                            <span>{tag}</span>
-                            <button 
-                              type="button" 
-                              onClick={() => removeAllowListTag(tag)}
-                              className="tag-remove"
-                              aria-label={`Remove ${tag} from allowlist`}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        <input
-                          type="text"
-                          ref={allowListInputRef}
-                          value={allowListInput}
-                          onChange={(e) => setAllowListInput(e.target.value)}
-                          onKeyDown={handleAllowListKeyPress}
-                          placeholder="Type and press Enter to add..."
-                          className="tag-input"
-                        />
-                      </div>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={addAllowListTag}
-                      className="tag-add-button"
-                      disabled={!allowListInput.trim()}
-                    >
-                      Add
-                    </button>
-                  </div>
-                  <p className="input-hint">Press Enter or comma to add each term</p>
+                  <label className="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      checked={enabledTypes.ALLOW_LIST}
+                      onChange={() => toggleRedactionType('ALLOW_LIST')}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
                 </SettingItem>
+                
+                {enabledTypes.ALLOW_LIST && (
+                  <div className="setting-addon">
+                    <div className="tag-input-container">
+                      <div className="tag-input-wrapper">
+                        <div className="tag-list">
+                          {allowListTags.map((tag, index) => (
+                            <div key={index} className="tag allow-tag">
+                              <span>{tag}</span>
+                              <button 
+                                type="button" 
+                                onClick={() => removeAllowListTag(tag)}
+                                className="tag-remove"
+                                aria-label={`Remove ${tag} from allowlist`}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          <input
+                            type="text"
+                            ref={allowListInputRef}
+                            value={allowListInput}
+                            onChange={(e) => setAllowListInput(e.target.value)}
+                            onKeyDown={handleAllowListKeyPressWithBackspace}
+                            placeholder="Type and press Enter to add..."
+                            className="tag-input"
+                          />
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={addAllowListTag}
+                        className="tag-add-button"
+                        disabled={!allowListInput.trim()}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <p className="input-hint">Press Enter or comma to add each term</p>
+                  </div>
+                )}
                 
                 <SettingItem
                   title="Deny List" 
@@ -499,7 +603,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             ref={denyListInputRef}
                             value={denyListInput}
                             onChange={(e) => setDenyListInput(e.target.value)}
-                            onKeyDown={handleDenyListKeyPress}
+                            onKeyDown={handleDenyListKeyPressWithBackspace}
                             placeholder="Type and press Enter to add..."
                             className="tag-input"
                           />
