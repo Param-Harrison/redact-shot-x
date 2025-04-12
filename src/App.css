@@ -366,12 +366,49 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(60px, 10vw, 80px);
-  height: clamp(60px, 10vw, 80px);
-  margin-bottom: 1.5rem;
+  width: clamp(70px, 9vw, 90px); /* Slightly larger but more consistent size */
+  height: clamp(70px, 9vw, 90px);
+  margin-bottom: 1.75rem;
   border-radius: 50%;
-  background-color: #e6f0ff;
+  background-color: rgba(16, 185, 129, 0.08); /* Lighter, more elegant background */
   color: var(--primary-color);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12); /* Soft shadow for depth */
+  transition: all 0.3s ease;
+  border: 1px solid rgba(16, 185, 129, 0.15); /* Subtle border */
+  position: relative; /* For the inner ring effect */
+}
+
+/* Make the SVG icon more refined */
+.drop-icon svg {
+  width: 38px;
+  height: 38px;
+  stroke: currentColor;
+  stroke-width: 1.5; /* Thinner lines for more elegance */
+  filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.2)); /* Subtle glow effect */
+}
+
+/* Add hover effect for better interactivity */
+.drop-area:hover .drop-icon {
+  transform: scale(1.05);
+  background-color: rgba(16, 185, 129, 0.12);
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.18);
+}
+
+/* Dark mode styling for drop icon */
+.dark-mode .drop-icon {
+  background-color: rgba(52, 211, 153, 0.08);
+  color: var(--primary-color);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+  box-shadow: 0 8px 24px rgba(52, 211, 153, 0.1);
+}
+
+.dark-mode .drop-icon::after {
+  border: 1px dashed rgba(52, 211, 153, 0.25);
+}
+
+.dark-mode .drop-area:hover .drop-icon {
+  background-color: rgba(52, 211, 153, 0.12);
+  box-shadow: 0 12px 28px rgba(52, 211, 153, 0.15);
 }
 
 .drop-area h3 {
@@ -1889,26 +1926,33 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 1.25rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
   gap: 1.5rem;
-  background-color: rgba(248, 250, 252, 0.5);
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  transition: background-color 0.2s ease;
+  background-color: white;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
 .setting-item:hover {
-  background-color: rgba(248, 250, 252, 0.9);
+  border-color: rgba(16, 185, 129, 0.25);
+  background-color: rgba(248, 250, 252, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 
 .dark-mode .setting-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(55, 65, 81, 0.7);
   background-color: rgba(42, 58, 81, 0.7); /* Brighter and more opaque for better contrast */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .dark-mode .setting-item:hover {
   background-color: rgba(55, 71, 94, 0.8); /* Lighter on hover for better feedback */
+  border-color: rgba(52, 211, 153, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .setting-item-text {
