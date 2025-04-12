@@ -54,7 +54,17 @@ function App() {
   const [isDicomImage, setIsDicomImage] = useState<boolean>(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    // Check if user has a system preference for dark mode
+    const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Apply dark mode class to body if system prefers dark
+    if (prefersDarkMode) {
+      document.body.classList.add('dark-mode');
+    }
+    
+    return prefersDarkMode;
+  });
   const [apiError, setApiError] = useState<string | null>(null);
   
   // Updated PII types based on Microsoft Presidio's supported entities
@@ -372,6 +382,28 @@ function App() {
       document.body.classList.remove('dark-mode');
     }
   };
+
+  // Listen for system dark mode preference changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    const handleChange = (e: MediaQueryListEvent) => {
+      setDarkMode(e.matches);
+      if (e.matches) {
+        document.body.classList.add('dark-mode');
+      } else {
+        document.body.classList.remove('dark-mode');
+      }
+    };
+    
+    // Add listener for changes in system dark mode preference
+    mediaQuery.addEventListener('change', handleChange);
+    
+    // Clean up
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
 
   return (
     <main className={`app-container ${darkMode ? 'dark-mode' : ''}`} style={{ minHeight: `${viewportHeight}px` }}>
