@@ -490,7 +490,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             value={regexPatternInput}
                             onChange={(e) => setRegexPatternInput(e.target.value)}
                             onKeyDown={handleCustomRegexKeyPressWithBackspace}
-                            placeholder="Type regex pattern and press Enter..."
+                            placeholder="Enter regex pattern..."
                             className="tag-input"
                           />
                         </div>
@@ -504,7 +504,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         Add
                       </button>
                     </div>
-                    <p className="input-hint">Enter valid regex patterns (e.g., \d{3}-\d{2}-\d{4} for SSN)</p>
+                    <p className="input-hint">Enter a pattern and press Enter or click Add button. Examples: \d{3}-\d{2}-\d{4} (SSN), [A-Z]{2}\d{6} (passport), (Dr|Mr|Mrs)\.\s[A-Z][a-z]+ (titles)</p>
                   </div>
                 )}
                 
@@ -548,7 +548,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             value={allowListInput}
                             onChange={(e) => setAllowListInput(e.target.value)}
                             onKeyDown={handleAllowListKeyPressWithBackspace}
-                            placeholder="Type and press Enter to add..."
+                            placeholder="Enter word or phrase..."
                             className="tag-input"
                           />
                         </div>
@@ -562,7 +562,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         Add
                       </button>
                     </div>
-                    <p className="input-hint">Press Enter or comma to add each term</p>
+                    <p className="input-hint">Enter text and press Enter, comma, or click Add</p>
                   </div>
                 )}
                 
@@ -604,7 +604,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             value={denyListInput}
                             onChange={(e) => setDenyListInput(e.target.value)}
                             onKeyDown={handleDenyListKeyPressWithBackspace}
-                            placeholder="Type and press Enter to add..."
+                            placeholder="Enter word or phrase..."
                             className="tag-input"
                           />
                         </div>
@@ -618,7 +618,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         Add
                       </button>
                     </div>
-                    <p className="input-hint">Press Enter or comma to add each term</p>
+                    <p className="input-hint">Enter text and press Enter, comma, or click Add</p>
                   </div>
                 )}
                 
