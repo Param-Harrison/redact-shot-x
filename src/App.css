@@ -1159,6 +1159,7 @@ button {
   color: #4b5563;
 }
 
+/* Info icon with improved styling */
 .info-icon {
   width: 20px;
   height: 20px;
@@ -1173,6 +1174,7 @@ button {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-right: 4px;
 }
 
 .info-icon:hover {
@@ -1209,7 +1211,7 @@ button {
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-95%);
+    transform: translateY(-90%);
   }
   to {
     opacity: 1;
@@ -1234,6 +1236,7 @@ button {
   transform: translateX(-50%) translateY(-100%);
 }
 
+/* Tooltip arrow */
 .tooltip::after {
   content: '';
   position: absolute;
@@ -1243,15 +1246,17 @@ button {
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
   border-top: 8px solid #333;
+  transform: translateX(0);
 }
 
+/* Arrow positioning for different alignments */
 .tooltip.left-aligned::after {
-  left: 15px;
+  left: 16px;
   right: auto;
 }
 
 .tooltip.right-aligned::after {
-  right: 15px;
+  right: 16px;
   left: auto;
 }
 
@@ -1283,6 +1288,22 @@ button {
     left: 50%;
     right: auto;
     transform: translateX(-50%) translateY(-100%);
+  }
+  
+  .tooltip.left-aligned::after,
+  .tooltip.right-aligned::after {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+  
+  /* Handle custom tooltips on mobile */
+  .tooltip-left, .tooltip-right {
+    bottom: calc(100% + 8px);
+    top: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
   }
   
   .tooltip-left::before, .tooltip-right::before {
@@ -1592,9 +1613,11 @@ button {
 @keyframes fadeInTooltip {
   from {
     opacity: 0;
+    transform: scale(0.95) translateY(3px);
   }
   to {
     opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -1921,10 +1944,6 @@ button {
   background-color: rgba(30, 41, 59, 0.8);
 }
 
-.setting-item:last-child {
-  border-bottom: none;
-}
-
 .setting-item-text {
   flex: 1;
   padding-right: 1rem;
@@ -1975,33 +1994,9 @@ button {
 /* Tooltip container */
 .tooltip-container {
   position: relative;
-}
-
-/* Info icon with improved styling */
-.info-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background-color: rgba(16, 185, 129, 0.15);
-  color: var(--primary-color);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.info-icon:hover {
-  background-color: rgba(16, 185, 129, 0.25);
-  transform: scale(1.05);
-}
-
-.dark-mode .info-icon {
-  background-color: rgba(52, 211, 153, 0.15);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Settings tabs with improved styling */

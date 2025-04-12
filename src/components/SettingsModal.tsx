@@ -85,6 +85,7 @@ const formatPiiTypeName = (type: string): string => {
     case 'MAC_ADDRESS': return 'MAC Addresses';
     case 'US_BANK_ACCOUNT': return 'US Bank Account Numbers';
     case 'US_BANK_ROUTING': return 'US Bank Routing Numbers';
+    case 'US_DRIVER_LICENSE': return 'US Driver License Numbers';
     case 'STREET_ADDRESS': return 'Street Addresses';
     case 'ZIPCODE': return 'ZIP Codes';
     case 'LOCATION': return 'Location Names';
@@ -151,12 +152,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   denyListTags,
   allowListInput,
   denyListInput,
-  regexPatternInput,
   useContextEnhancement,
   isDicomImage,
   setAllowListInput,
   setDenyListInput,
-  setRegexPatternInput,
   setUseContextEnhancement,
   addAllowListTag,
   addDenyListTag,
@@ -166,19 +165,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   handleDenyListKeyPress,
   allowListInputRef,
   denyListInputRef,
-  regexPatternInputRef,
   activeTooltip,
   showTooltip,
   hideTooltip,
   tooltips,
   selectedTab,
   setSelectedTab,
-  customRegexes,
-  setCustomRegexes,
   darkMode = false
 }) => {
-  const [newRegex, setNewRegex] = useState('');
-
   // Add function to position tooltips intelligently
   const getTooltipPosition = (tooltipId: string) => {
     const element = document.getElementById(`tooltip-trigger-${tooltipId}`);
@@ -198,18 +192,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     } else {
       return 'center-aligned';
     }
-  };
-
-  const addRegex = () => {
-    if (newRegex && !customRegexes.includes(newRegex)) {
-      setCustomRegexes([...customRegexes, newRegex]);
-      setNewRegex('');
-    }
-  };
-
-  const removeRegex = (index: number) => {
-    const updatedRegexes = customRegexes.filter((_, i) => i !== index);
-    setCustomRegexes(updatedRegexes);
   };
 
   if (!isOpen) return null;

@@ -92,7 +92,6 @@ function App() {
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dropAreaRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const allowListInputRef = useRef<HTMLInputElement>(null);
   const denyListInputRef = useRef<HTMLInputElement>(null);
@@ -192,20 +191,6 @@ function App() {
         setRedactionCount(Math.floor(Math.random() * 8) + 1); // Random count for demo
         setIsProcessing(false);
       }, 1500);
-      
-      // Real implementation would be:
-      // const result = await invoke("process_image", { 
-      //   imageData, 
-      //   redactionMethod,
-      //   enabledTypes,
-      //   allowList: allowListTags,
-      //   denyList: denyListTags,
-      //   useContextEnhancement,
-      //   isDicomImage,
-      //   customRegex: regexPatternInput.trim() !== '' ? regexPatternInput : undefined,
-      // });
-      // setRedactedImage(result.redactedImage);
-      // setRedactionCount(result.redactionCount);
     } catch (error) {
       console.error("Error processing image:", error);
       setIsProcessing(false);
