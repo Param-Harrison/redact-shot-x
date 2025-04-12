@@ -27,6 +27,9 @@ type EnabledTypesRecord = {
   ZIPCODE: boolean;
   LOCATION: boolean;
   DATE: boolean;
+  CUSTOM_REGEX: boolean;
+  DENY_LIST: boolean;
+  ALLOW_LIST: boolean;
   [key: string]: boolean;
 };
 
@@ -89,6 +92,7 @@ function App() {
     // Custom
     CUSTOM_REGEX: false,
     DENY_LIST: false,
+    ALLOW_LIST: false,
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,14 +126,32 @@ function App() {
     medicalLicense: "Detects medical license numbers",
   };
 
-  // Handle viewport size changes
+  // Enhanced viewport handling for orientation changes
   useEffect(() => {
     const handleResize = () => {
       setViewportHeight(window.innerHeight);
+      
+      // Set viewport meta tag for mobile devices
+      const viewportMeta = document.querySelector('meta[name="viewport"]');
+      if (!viewportMeta) {
+        const meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+        document.head.appendChild(meta);
+      }
     };
 
+    // Initial call
+    handleResize();
+
+    // Listen for resize and orientation change
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   // Handle file drop
@@ -353,12 +375,23 @@ function App() {
           <div className="content-summary">
             {redactedImage && (
               <div className="redaction-summary">
-                <p>Redaction complete with <strong>{redactionMethod}</strong> method</p>
-                {redactionCount > 0 && (
-                  <p className="redaction-count">
-                    {redactionCount} {redactionCount === 1 ? 'item' : 'items'} redacted
-                  </p>
+                <div className="redaction-summary-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+                <p>Redaction complete with <span className="redaction-method">{redactionMethod === "blur" ? "Blur" : "Black Box"}</span> method</p>
+                
+                {redactionCount > 0 ? (
+                  <div className="redaction-count">
+                    <span className="redaction-count-value">{redactionCount}</span> 
+                    {redactionCount === 1 ? 'item' : 'items'} redacted
+                  </div>
+                ) : (
+                  <p className="redaction-count no-items-message">No items detected for redaction</p>
                 )}
+                
                 <button 
                   className="link-button" 
                   onClick={openSettings}

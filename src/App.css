@@ -20,6 +20,7 @@
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.12);
   --transition: all 0.2s ease;
+  --mobile-touch-target: 44px;
 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   font-size: 16px;
@@ -69,6 +70,10 @@ html, body {
   background-color: white;
   position: relative;
   padding: 0 clamp(0.5rem, 3vw, 1.5rem);
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, clamp(0.5rem, 3vw, 1.5rem));
+  padding-right: env(safe-area-inset-right, clamp(0.5rem, 3vw, 1.5rem));
 }
 
 .dark-mode .app-container {
@@ -83,6 +88,7 @@ html, body {
   position: sticky;
   top: 0;
   z-index: 10;
+  padding-top: max(1.25rem, env(safe-area-inset-top, 1.25rem));
 }
 
 .dark-mode .app-header {
@@ -390,8 +396,10 @@ html, body {
   display: flex;
   flex-direction: column;
   padding: clamp(1rem, 3vw, 1.5rem);
+  overflow-x: hidden;
   overflow-y: auto;
   min-height: 300px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .image-preview {
@@ -683,6 +691,7 @@ button {
   position: sticky;
   bottom: 0;
   z-index: 5;
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
 }
 
 .dark-mode .app-footer {
@@ -1690,71 +1699,147 @@ button {
 
 /* Content Summary styles */
 .content-summary {
-  margin: 1.5rem 0;
+  margin-bottom: 1rem;
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
 .redaction-summary {
-  background-color: rgba(16, 185, 129, 0.08);
-  border-radius: 12px;
+  background-color: rgba(16, 185, 129, 0.04);
+  border-radius: var(--border-radius);
   padding: 1.25rem;
   text-align: center;
-  max-width: 400px;
+  width: 100%;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(16, 185, 129, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.redaction-summary:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .dark-mode .redaction-summary {
-  background-color: rgba(52, 211, 153, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background-color: rgba(52, 211, 153, 0.04);
+  border: 1px solid rgba(52, 211, 153, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .redaction-summary p {
   margin: 0;
   color: var(--text-color);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.redaction-summary-icon {
+  margin: 0 auto 0.25rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: rgba(16, 185, 129, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+}
+
+.dark-mode .redaction-summary-icon {
+  background-color: rgba(52, 211, 153, 0.12);
+}
+
+.redaction-summary-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.redaction-method {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--primary-color);
+  position: relative;
+}
+
+.redaction-method::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--primary-color);
+  opacity: 0.3;
 }
 
 .redaction-count {
   font-weight: 600;
   color: var(--success-color);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.redaction-count-value {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.redaction-divider {
+  width: 80%;
+  height: 1px;
+  background-color: rgba(16, 185, 129, 0.15);
+  margin: 0 auto;
 }
 
 .link-button {
-  background: none;
+  background-color: rgba(16, 185, 129, 0.08);
   border: none;
   color: var(--primary-color);
   font-weight: 500;
   cursor: pointer;
-  padding: 0.5rem;
-  transition: var(--transition);
-  margin-top: 0.5rem;
+  padding: 0.6rem 1rem;
+  margin-top: 0.25rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
   text-decoration: none;
-  position: relative;
   display: inline-block;
-}
-
-.link-button::after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 1px;
-  bottom: 0.4rem;
-  left: 0;
-  background-color: var(--primary-color);
-  opacity: 0.5;
+  align-self: center;
+  font-size: 0.95rem;
 }
 
 .link-button:hover {
-  color: var(--primary-hover);
+  color: white;
+  background-color: var(--primary-color);
+  transform: translateY(-1px);
 }
 
-.link-button:hover::after {
-  background-color: var(--primary-hover);
+.dark-mode .link-button:hover {
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
+}
+
+.no-items-message {
+  color: var(--text-light);
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .redaction-summary {
+    max-width: 90%;
+    padding: 1.5rem;
+  }
 }
 
 /* Dark mode support for new elements */
@@ -1912,7 +1997,7 @@ button {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
-    padding: 1rem;
+    padding: 1rem 0.75rem;
   }
   
   .setting-item-control {
@@ -2270,10 +2355,6 @@ button {
   border-bottom-color: #333;
 }
 
-.dark-mode .tooltip-bottom::before {
-  border-bottom-color: #1a1a1a;
-}
-
 .tooltip-top {
   bottom: calc(100% + 8px);
   left: 50%;
@@ -2288,10 +2369,6 @@ button {
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: #333;
-}
-
-.dark-mode .tooltip-top::before {
-  border-top-color: #1a1a1a;
 }
 
 .tooltip-right {
@@ -2310,10 +2387,6 @@ button {
   border-right-color: #333;
 }
 
-.dark-mode .tooltip-right::before {
-  border-right-color: #1a1a1a;
-}
-
 .tooltip-left {
   right: calc(100% + 8px);
   top: 50%;
@@ -2328,12 +2401,6 @@ button {
   transform: translateY(-50%);
   border: 5px solid transparent;
   border-left-color: #333;
-}
-
-.dark-mode .tooltip-left::before {
-  border-left-color: transparent;
-  border-right-color: transparent;
-  border-top-color: #1a1a1a;
 }
 
 /* Handle edge cases for tooltips close to window edges */
@@ -2493,5 +2560,198 @@ button {
 
 .redaction-method-option:hover:not(.active) {
   color: var(--primary-color);
+}
+
+/* Improved mobile touch targets */
+@media (max-width: 768px) {
+  .icon-button {
+    width: var(--mobile-touch-target);
+    height: var(--mobile-touch-target);
+  }
+  
+  .toggle-option input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .tag-remove {
+    padding: 8px;
+    margin-left: 2px;
+  }
+  
+  .toggle-buttons button {
+    padding: 0.75rem 0.75rem;
+  }
+  
+  /* Ensure header stays clean on small screens */
+  .app-header h1 {
+    font-size: clamp(1.25rem, 4vw, 1.85rem);
+  }
+  
+  .header-content {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .app-branding {
+    width: 100%;
+    padding-right: 0;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Make tap targets more finger-friendly */
+  .redaction-method-option {
+    min-height: var(--mobile-touch-target);
+  }
+  
+  .setting-item {
+    padding: 1rem 0.75rem;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .app-header {
+    padding: 1rem 1rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .image-preview {
+    min-height: 200px;
+  }
+  
+  /* Better spacing for small screens */
+  .drop-area {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .content-area {
+    padding: 1rem;
+  }
+  
+  /* Ensure tooltips don't overflow screen */
+  .tooltip {
+    max-width: 80vw;
+  }
+  
+  /* Better spacing for settings on small screens */
+  .settings-modal-content {
+    padding: 0.75rem;
+  }
+  
+  .settings-tabs button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Ensure content is scrollable on all devices */
+.content-area {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Improved vertical spacing on small screens */
+@media (max-height: 600px) {
+  .drop-icon {
+    margin-bottom: 0.75rem;
+    width: clamp(50px, 8vw, 70px);
+    height: clamp(50px, 8vw, 70px);
+  }
+  
+  .drop-area h3 {
+    margin-bottom: 0.35rem;
+  }
+  
+  .drop-area {
+    min-height: 120px;
+  }
+}
+
+/* Improved touch feedback for mobile interactions */
+@media (hover: none) {
+  .primary-button:active,
+  .secondary-button:active,
+  .icon-button:active,
+  .toggle-buttons button:active,
+  .settings-tabs button:active,
+  .tag-add-button:active,
+  .redaction-method-option:active,
+  .tag-remove:active {
+    transform: scale(0.96);
+    transition: transform 0.1s ease;
+  }
+  
+  /* Fix hover states on touch devices */
+  .drop-area:hover {
+    border-color: #d1d5db;
+    background-color: #f9fafc;
+  }
+  
+  .drop-area.dragging {
+    border-color: var(--primary-color);
+    background-color: rgba(16, 185, 129, 0.1);
+  }
+  
+  .dark-mode .drop-area:hover {
+    border-color: #4b5563;
+    background-color: #2d3748;
+  }
+}
+
+/* Landscape orientation handling */
+@media (max-height: 500px) and (orientation: landscape) {
+  .app-container {
+    display: block;
+    min-height: auto;
+  }
+  
+  .app-header {
+    position: relative;
+  }
+  
+  .content-area {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  
+  .image-preview {
+    max-height: 40vh;
+    min-height: 150px;
+  }
+  
+  .settings-modal {
+    height: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  
+  .drop-area {
+    min-height: 100px;
+    margin: 1rem;
+    padding: 1rem;
+  }
+  
+  .drop-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .drop-area h3 {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .drop-area p {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+  }
 }
 
