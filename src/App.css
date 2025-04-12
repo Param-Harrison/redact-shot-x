@@ -102,6 +102,8 @@ html, body {
   justify-content: space-between;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 2rem); /* Added horizontal padding */
+  width: 100%; /* Ensure full width within constraints */
 }
 
 .app-branding {
@@ -936,181 +938,6 @@ button {
   color: var(--text-color);
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary-color: #4d94ff;
-    --primary-hover: #70a9ff;
-    --secondary-color: #1a1a1a;
-    --text-color: #e2e2e2;
-    --text-light: #a0a0a0;
-    --success-color: #4cd496;
-    --error-color: #ff7b7b;
-  }
-  
-  body {
-    background-color: #121212;
-  }
-  
-  .app-container {
-    background-color: #1e1e1e;
-  }
-  
-  .app-header {
-    background-color: #1e1e1e;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  
-  .drop-area {
-    background-color: #2c2c2c;
-    border-color: #444;
-  }
-  
-  .drop-area:hover, .drop-area.dragging {
-    background-color: #303030;
-  }
-  
-  .drop-icon {
-    background-color: #3a4556;
-  }
-  
-  .drop-area h3 {
-    color: #e0e0e0;
-  }
-  
-  .image-preview {
-    background-color: #2c2c2c;
-  }
-  
-  .processing-overlay {
-    background-color: rgba(30, 30, 30, 0.8);
-  }
-  
-  .settings-panel {
-    background-color: #2c2c2c;
-  }
-  
-  .toggle-buttons {
-    background-color: #3a3a3a;
-    border-color: #444;
-  }
-  
-  .toggle-option input[type="checkbox"] {
-    border-color: #555;
-  }
-  
-  .secondary-button {
-    background-color: #3a3a3a;
-    color: #c0c0c0;
-    border-color: #444;
-  }
-  
-  .secondary-button:hover {
-    background-color: #444;
-  }
-  
-  .app-footer {
-    background-color: #232323;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  
-  .footer-separator {
-    color: var(--primary-color);
-  }
-  
-  .select-dropdown, .text-input {
-    background-color: #2c2c2c;
-    border-color: #444;
-    color: var(--text-color);
-  }
-  
-  .select-dropdown:focus, .text-input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(77, 148, 255, 0.2);
-  }
-  
-  .text-input::placeholder {
-    color: #777;
-  }
-  
-  .settings-tabs {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .alert-box {
-    background-color: rgba(255, 107, 107, 0.05);
-    border-color: rgba(255, 107, 107, 0.2);
-  }
-
-  /* Dark mode for the new UI elements */
-  .setting-card {
-    background-color: #2c2c2c;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .setting-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-  
-  .setting-header h3 {
-    color: #e0e0e0;
-  }
-  
-  .info-icon {
-    background-color: rgba(52, 211, 153, 0.15);
-  }
-  
-  .tooltip {
-    background-color: #1a1a1a;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-  
-  .tooltip::after {
-    border-top-color: #1a1a1a;
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
-  }
-  
-  .tag-input-wrapper {
-    background-color: #2c2c2c;
-    border-color: #444;
-  }
-  
-  .tag {
-    background-color: rgba(77, 148, 255, 0.2);
-  }
-  
-  .deny-tag {
-    background-color: rgba(255, 107, 107, 0.15);
-  }
-  
-  .tag-input {
-    color: var(--text-color);
-  }
-  
-  .tag-add-button:disabled {
-    background-color: #3a3a3a;
-    color: #666;
-  }
-  
-  .custom-regex-input {
-    background-color: #2c2c2c;
-    border-color: #444;
-    color: var(--text-color);
-  }
-  
-  .toggle-slider {
-    background-color: #444;
-  }
-  
-  .toggle-slider:after {
-    background-color: #ccc;
-  }
-  
-  .elegant-toggle span {
-    color: #e0e0e0;
-  }
-}
-
 /* Settings layout */
 .settings-layout {
   display: flex;
@@ -1902,46 +1729,6 @@ button {
   .redaction-summary {
     max-width: 90%;
     padding: 1.5rem;
-  }
-}
-
-/* Dark mode support for new elements */
-@media (prefers-color-scheme: dark) {
-  .settings-button {
-    color: var(--text-light);
-  }
-  
-  .settings-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--primary-color);
-  }
-  
-  .settings-modal {
-    background-color: #1e293b;
-  }
-  
-  .settings-modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .settings-modal-header h2 {
-    color: var(--text-color);
-  }
-  
-  .settings-modal-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .redaction-summary {
-    background-color: rgba(52, 211, 153, 0.06);
-  }
-  
-  .link-button {
-    color: var(--primary-color);
-  }
-  
-  .link-button:hover {
-    color: var(--primary-hover);
   }
 }
 
@@ -2958,5 +2745,75 @@ body, .app-container, .settings-modal-content {
   left: auto;
   top: 50%;
   transform: translateY(-50%);
+}
+
+/* Dark mode styling for tag input container */
+.dark-mode .tag-input-wrapper {
+  border-color: #4b5563;
+  background-color: #1e293b;
+  box-shadow: none;
+}
+
+.dark-mode .tag-input-wrapper:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.15);
+}
+
+/* Dark mode styling for tag input */
+.dark-mode .tag-input {
+  color: var(--text-color);
+}
+
+.dark-mode .tag-input::placeholder {
+  color: #94a3b8;
+}
+
+/* Dark mode styling for tags */
+.dark-mode .tag {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: var(--primary-color);
+}
+
+.dark-mode .deny-tag {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.dark-mode .allow-tag {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.dark-mode .regex-tag {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+/* Dark mode styling for tag remove button */
+.dark-mode .tag-remove {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.dark-mode .tag-remove:hover {
+  opacity: 1;
+}
+
+/* Dark mode styling for tag add button */
+.dark-mode .tag-add-button:disabled {
+  background-color: #475569;
+  color: #94a3b8;
+}
+
+/* Dark mode styling for custom regex input */
+.dark-mode .custom-regex-input {
+  border-color: #4b5563;
+  background-color: #1e293b;
+  color: var(--text-color);
+}
+
+.dark-mode .custom-regex-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.15);
 }
 
