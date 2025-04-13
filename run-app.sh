@@ -87,10 +87,20 @@ else
   exit 1
 fi
 
-# Launch CLI redactor in background as dummy (replace with FastAPI if needed)
-echo -e "${YELLOW}⚙ Starting Python sidecar...${NC}"
-python redactor.py --help || true &
+# Launch FastAPI backend (api.py)
+echo -e "${YELLOW}⚙ Starting FastAPI backend (api.py)...${NC}"
+uvicorn api:app --host 127.0.0.1 --port 8000 &
 PYTHON_PID=$!
+
+# Wait until FastAPI is up (health check)
+echo -e "${YELLOW}⏳ Waiting for API to become responsive...${NC}"
+for i in {1..10}; do
+  if curl -s http://127.0.0.1:8000/ | grep -q '"status":'; then
+    echo -e "${GREEN}✅ API is up!${NC}"
+    break
+  fi
+  sleep 1
+done
 
 cd ..
 

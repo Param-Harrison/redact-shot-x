@@ -5,12 +5,18 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000, // Use a different port than Tauri
+    port: 3000,
     strictPort: true,
-    cors: true
+    cors: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api/, '')
+      }
+    }
   },
-  // Use a different build output directory to avoid conflicts
   build: {
     outDir: 'dist-web'
   }
-}); 
+});
