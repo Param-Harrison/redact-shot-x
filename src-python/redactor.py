@@ -40,7 +40,7 @@ class ImageRedactor:
 
         results = self.image_analyzer.analyze(image=image)
 
-        redacted = self.image_redactor.redact(image=image, fill="contrast")  # blur fill
+        redacted = self.image_redactor.redact(image=image, fill=None)
         output_path = image_path.replace(".", "-redacted.")
 
         redacted.save(output_path)

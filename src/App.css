@@ -65,7 +65,8 @@ html, body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 100%;
+  max-width: 720px;
+  width: 100%;
   margin: 0 auto;
   background-color: white;
   position: relative;
@@ -89,6 +90,9 @@ html, body {
   top: 0;
   z-index: 10;
   padding-top: max(1.25rem, env(safe-area-inset-top, 1.25rem));
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .dark-mode .app-header {
@@ -335,6 +339,10 @@ html, body {
   cursor: pointer;
   transition: var(--transition);
   min-height: 200px;
+  max-width: 720px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .dark-mode .drop-area {
@@ -360,6 +368,7 @@ html, body {
   text-align: center;
   width: 100%;
   max-width: 400px;
+  margin: 0 auto;
 }
 
 .drop-icon {
@@ -439,7 +448,7 @@ html, body {
   overflow-y: auto;
   min-height: 300px;
   -webkit-overflow-scrolling: touch;
-  max-width: 1200px;
+  max-width: 720px;
   margin: 0 auto;
   width: 100%;
 }
@@ -737,6 +746,9 @@ button {
   bottom: 0;
   z-index: 5;
   padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .dark-mode .app-footer {
@@ -807,19 +819,19 @@ button {
     margin-bottom: 1.5rem;
     min-height: 400px;
     max-height: 80vh;
-    max-width: 1200px;
+    max-width: 720px;
     width: 100%;
   }
   
   .controls {
     width: 100%;
-    max-width: 1200px;
+    max-width: 720px;
     margin: 0 auto;
   }
   
   .action-buttons {
     width: 100%;
-    max-width: 1200px;
+    max-width: 720px;
     margin: 0 auto;
     display: flex;
     justify-content: center;
