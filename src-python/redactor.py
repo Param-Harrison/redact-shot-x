@@ -27,7 +27,10 @@ class ImageRedactor:
         )
         nlp_engine = provider.create_engine()
 
-        self.analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
+        self.analyzer = AnalyzerEngine(
+            nlp_engine=nlp_engine,
+            supported_languages=["en"],
+        )
         self.image_analyzer = ImageAnalyzerEngine(self.analyzer)
         self.image_redactor = ImageRedactorEngine()
 
@@ -37,7 +40,7 @@ class ImageRedactor:
 
         results = self.image_analyzer.analyze(image=image)
 
-        redacted = self.image_redactor.redact(image=image, fill=None)  # blur fill
+        redacted = self.image_redactor.redact(image=image, fill="contrast")  # blur fill
         output_path = image_path.replace(".", "-redacted.")
 
         redacted.save(output_path)
