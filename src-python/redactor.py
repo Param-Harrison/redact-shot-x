@@ -4,6 +4,7 @@ import base64
 import logging
 from io import BytesIO
 from PIL import Image, ImageFilter
+from typing import List, Dict, Any, Optional
 
 from presidio_analyzer import (
     AnalyzerEngine,
@@ -13,7 +14,7 @@ from presidio_analyzer import (
 )
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_analyzer.context_aware_enhancers import LemmaContextAwareEnhancer
-from presidio_image_redactor.image_analyzer_engine import ImageAnalyzerEngine
+from presidio_image_redactor import ImageAnalyzerEngine
 
 logger = logging.getLogger("redactor")
 logging.basicConfig(level=logging.INFO)
@@ -361,24 +362,30 @@ class ImageRedactor:
         if config.get("enabledTypes", {}).get("CUSTOM_REGEX") and config.get(
             "customRegexes"
         ):
-            for i, regex_pattern in enumerate(config["customRegexes"]):
+            regex_patterns = config["customRegexes"]
+            logger.info(f"Processing {len(regex_patterns)} custom regex patterns")
+
+            # Bundle all patterns into a single recognizer to improve performance
+            patterns = []
+            for i, regex_pattern in enumerate(regex_patterns):
                 try:
                     # Create a pattern with the custom regex
                     pattern = Pattern(
                         name=f"custom_pattern_{i}", regex=regex_pattern, score=0.75
                     )
-
-                    # Create a recognizer for this pattern
-                    custom_recognizer = PatternRecognizer(
-                        supported_entity=f"CUSTOM_{i}", patterns=[pattern]
-                    )
-
-                    ad_hoc_recognizers.append(custom_recognizer)
+                    patterns.append(pattern)
                     logger.info(f"Added custom regex pattern: {regex_pattern}")
                 except Exception as e:
                     logger.error(
                         f"Error adding custom regex pattern '{regex_pattern}': {str(e)}"
                     )
+
+            if patterns:
+                # Create a single recognizer with all patterns
+                custom_recognizer = PatternRecognizer(
+                    supported_entity="CUSTOM_REGEX", patterns=patterns
+                )
+                ad_hoc_recognizers.append(custom_recognizer)
 
         # Check if deny list is enabled
         if config.get("enabledTypes", {}).get("DENY_LIST") and config.get(
@@ -412,7 +419,7 @@ class ImageRedactor:
             and config.get("allowListTags")
         ):
             allow_list = config["allowListTags"]
-            logger.info(f"Using allow list with {len(allow_list)} items")
+            logger.info(f"Using allow list with {len(allow_list)} items: {allow_list}")
 
         # Create custom recognizers from config
         ad_hoc_recognizers = []
@@ -451,7 +458,7 @@ class ImageRedactor:
             and config.get("allowListTags")
         ):
             allow_list = config["allowListTags"]
-            logger.info(f"Using allow list with {len(allow_list)} items")
+            logger.info(f"Using allow list with {len(allow_list)} items: {allow_list}")
 
         # Create custom recognizers from config
         ad_hoc_recognizers = []
@@ -488,6 +495,23 @@ class ImageRedactor:
     def _blur_redact(
         self, image: Image.Image, ad_hoc_recognizers=None, allow_list=None
     ):
+        # First, let's extract text from the image to better handle allow list
+        try:
+            from PIL import ImageDraw
+            import pytesseract
+
+            has_pytesseract = True
+            extracted_text = pytesseract.image_to_data(
+                image, output_type=pytesseract.Output.DICT
+            )
+            logger.info(
+                f"Extracted {len(extracted_text['text'])} text blocks from image"
+            )
+        except (ImportError, Exception) as e:
+            logger.warning(f"Could not use pytesseract for text extraction: {str(e)}")
+            has_pytesseract = False
+            extracted_text = None
+
         # Analyze the image for PII entities with higher sensitivity settings
         try:
             # Analyze using image_analyzer's analyze method with appropriate parameters
@@ -511,23 +535,75 @@ class ImageRedactor:
             logger.info("No PII entities detected in image")
             return redacted_image, []
 
-        # Filter results based on allow list if provided
-        filtered_results = results
-        if allow_list and len(allow_list) > 0:
-            filtered_results = []
-            for res in results:
-                # Check if the text value is in the allow list
-                if hasattr(res, "text") and res.text in allow_list:
-                    logger.info(
-                        f"Skipping redaction for text in allow list: {res.text}"
-                    )
-                    continue
+        # Enhanced allow list checking that works better with image text
+        filtered_results = []
+        allow_list_ignored = 0
+
+        for res in results:
+            should_redact = True
+
+            # Get the coordinates of this entity
+            left = int(res.left)
+            top = int(res.top)
+            width = int(res.width)
+            height = int(res.height)
+            right = left + width
+            bottom = top + height
+
+            # Enhanced allow list processing using the text in this bounding box
+            if allow_list and len(allow_list) > 0:
+                # First check if we have pytesseract results to use
+                if has_pytesseract and extracted_text:
+                    # Check all text blocks that might overlap with this entity
+                    for i in range(len(extracted_text["text"])):
+                        text = extracted_text["text"][i].strip()
+                        if not text:
+                            continue
+
+                        # Get text block coordinates
+                        t_left = extracted_text["left"][i]
+                        t_top = extracted_text["top"][i]
+                        t_width = extracted_text["width"][i]
+                        t_height = extracted_text["height"][i]
+                        t_right = t_left + t_width
+                        t_bottom = t_top + t_height
+
+                        # Check for overlap between entity and text block
+                        if (
+                            left < t_right
+                            and right > t_left
+                            and top < t_bottom
+                            and bottom > t_top
+                        ):
+                            # Check if this text matches any allow list entry
+                            for allowed in allow_list:
+                                if allowed.lower() in text.lower():
+                                    logger.info(
+                                        f"Allowing text based on allow list match: '{text}' contains '{allowed}'"
+                                    )
+                                    should_redact = False
+                                    allow_list_ignored += 1
+                                    break
+                # Fallback to simpler checking if extract_text is not available
+                elif hasattr(res, "text") and res.text:
+                    for allowed in allow_list:
+                        if allowed.lower() in res.text.lower():
+                            logger.info(
+                                f"Allowing text based on allow list match: '{res.text}' contains '{allowed}'"
+                            )
+                            should_redact = False
+                            allow_list_ignored += 1
+                            break
+
+            if should_redact:
                 filtered_results.append(res)
 
+        if allow_list_ignored > 0:
             logger.info(
-                f"Filtered {len(results) - len(filtered_results)} items from redaction (allow list)"
+                f"Filtered {allow_list_ignored} items from redaction based on allow list"
             )
-            results = filtered_results
+
+        results = filtered_results
 
         # Process and apply redactions
         for res in results:

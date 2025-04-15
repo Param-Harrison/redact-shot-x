@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 from redactor import ImageRedactor
 import uvicorn
 
@@ -29,7 +29,7 @@ redactor = ImageRedactor()
 
 class Base64Request(BaseModel):
     imageData: str
-    config: Optional[dict] = None
+    config: Optional[Dict[str, Any]] = None
 
 
 @app.get("/")
@@ -47,6 +47,7 @@ async def redact_uploaded_image(
         with open(temp_path, "wb") as buffer:
             buffer.write(await file.read())
 
+        # Parse configuration if provided
         config = None
         if config_json:
             try:
@@ -54,11 +55,25 @@ async def redact_uploaded_image(
                 logger.info(
                     f"Parsed configuration from request: {list(config.keys()) if config else None}"
                 )
-            except json.JSONDecodeError:
-                logger.warning("Failed to parse config JSON, using default settings")
 
+                # Log detailed config for debugging
+                if config:
+                    if config.get("enabledTypes"):
+                        logger.info(f"Enabled types: {config['enabledTypes']}")
+                    if config.get("allowListTags"):
+                        logger.info(f"Allow list: {config['allowListTags']}")
+                    if config.get("denyListTags"):
+                        logger.info(f"Deny list: {config['denyListTags']}")
+                    if config.get("customRegexes"):
+                        logger.info(f"Custom regexes: {config['customRegexes']}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse config JSON: {str(e)}")
+                config = None
+
+        # Pass the config to the redactor
         result = redactor.redact_image(temp_path, config)
 
+        # Clean up temp file
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
@@ -72,9 +87,22 @@ async def redact_uploaded_image(
 async def redact_base64_image(request: Base64Request):
     try:
         logger.info("Received base64 image redaction request")
+
+        # Log configuration details for debugging
         if request.config:
             logger.info(f"Configuration provided: {list(request.config.keys())}")
 
+            # Log detailed configuration
+            if request.config.get("enabledTypes"):
+                logger.info(f"Enabled types: {request.config['enabledTypes']}")
+            if request.config.get("allowListTags"):
+                logger.info(f"Allow list: {request.config['allowListTags']}")
+            if request.config.get("denyListTags"):
+                logger.info(f"Deny list: {request.config['denyListTags']}")
+            if request.config.get("customRegexes"):
+                logger.info(f"Custom regexes: {request.config['customRegexes']}")
+
+        # Process the image with configuration
         result = redactor.redact_image_base64(request.imageData, request.config)
         return JSONResponse(content=json.loads(result))
     except Exception as e:

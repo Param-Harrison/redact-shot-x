@@ -18,7 +18,8 @@ dependencies = [
     "Pillow>=11.2.1",
     "fastapi>=0.115.12",
     "uvicorn>=0.34.0",
-    "python-multipart>=0.0.20"
+    "python-multipart>=0.0.20",
+    "pytesseract>=0.3.10"
 ]
 
 [tool.setuptools]
