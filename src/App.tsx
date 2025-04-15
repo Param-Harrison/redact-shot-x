@@ -25,7 +25,6 @@ function App() {
   const [redactedImage, setRedactedImage] = useState<string | null>(null);
   const [redactionMethod, setRedactionMethod] = useState<"blur" | "box">("blur");
   const [redactionCount, setRedactionCount] = useState<number>(0);
-  const [showRedactionCount, setShowRedactionCount] = useState<boolean>(true);
   const [viewportHeight, setViewportHeight] = useState<number>(window.innerHeight);
   const [allowListTags, setAllowListTags] = useState<string[]>([]);
   const [denyListTags, setDenyListTags] = useState<string[]>([]);
@@ -373,7 +372,6 @@ function App() {
             redactedImage={redactedImage}
             isProcessing={isProcessing}
             redactionCount={redactionCount}
-            showRedactionCount={showRedactionCount}
           />
 
           <div className="content-summary">

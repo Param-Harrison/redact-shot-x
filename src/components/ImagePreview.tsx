@@ -5,15 +5,13 @@ interface ImagePreviewProps {
   redactedImage: string | null;
   isProcessing: boolean;
   redactionCount: number;
-  showRedactionCount: boolean;
 }
 
 const ImagePreview: React.FC<ImagePreviewProps> = ({
   image,
   redactedImage,
   isProcessing,
-  redactionCount,
-  showRedactionCount
+  redactionCount
 }) => {
   return (
     <div className="image-preview">
@@ -28,7 +26,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
         alt="Preview" 
         className={isProcessing ? 'processing' : ''}
       />
-      {redactedImage && showRedactionCount && (
+      {redactedImage && (
         <div className="redaction-badge">
           {redactionCount} {redactionCount === 1 ? 'redaction' : 'redactions'} applied
         </div>
