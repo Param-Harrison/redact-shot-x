@@ -29,7 +29,7 @@ redactor = ImageRedactor()
 
 class Base64Request(BaseModel):
     imageData: str
-    config: Optional[dict] = None  # ignored for now
+    config: Optional[dict] = None
 
 
 @app.get("/")
@@ -47,7 +47,17 @@ async def redact_uploaded_image(
         with open(temp_path, "wb") as buffer:
             buffer.write(await file.read())
 
-        result = redactor.redact_image(temp_path)
+        config = None
+        if config_json:
+            try:
+                config = json.loads(config_json)
+                logger.info(
+                    f"Parsed configuration from request: {list(config.keys()) if config else None}"
+                )
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse config JSON, using default settings")
+
+        result = redactor.redact_image(temp_path, config)
 
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -61,7 +71,11 @@ async def redact_uploaded_image(
 @app.post("/redact/base64")
 async def redact_base64_image(request: Base64Request):
     try:
-        result = redactor.redact_image_base64(request.imageData)
+        logger.info("Received base64 image redaction request")
+        if request.config:
+            logger.info(f"Configuration provided: {list(request.config.keys())}")
+
+        result = redactor.redact_image_base64(request.imageData, request.config)
         return JSONResponse(content=json.loads(result))
     except Exception as e:
         logger.exception("Error processing base64 image")

@@ -98,8 +98,6 @@ const SettingItem = ({
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   closeSettings,
-  redactionMethod,
-  setRedactionMethod,
   enabledTypes,
   toggleRedactionType,
   allowListTags,

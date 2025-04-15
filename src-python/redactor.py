@@ -349,10 +349,82 @@ class ImageRedactor:
         )
         registry.add_recognizer(id_card_recognizer)
 
-    def redact_image(self, image_path: str) -> str:
+    def _create_custom_recognizers_from_config(self, config):
+        """Create custom recognizers based on configuration from frontend"""
+        ad_hoc_recognizers = []
+
+        # Only process if config is provided
+        if not config:
+            return ad_hoc_recognizers
+
+        # Check if custom regex is enabled and patterns are provided
+        if config.get("enabledTypes", {}).get("CUSTOM_REGEX") and config.get(
+            "customRegexes"
+        ):
+            for i, regex_pattern in enumerate(config["customRegexes"]):
+                try:
+                    # Create a pattern with the custom regex
+                    pattern = Pattern(
+                        name=f"custom_pattern_{i}", regex=regex_pattern, score=0.75
+                    )
+
+                    # Create a recognizer for this pattern
+                    custom_recognizer = PatternRecognizer(
+                        supported_entity=f"CUSTOM_{i}", patterns=[pattern]
+                    )
+
+                    ad_hoc_recognizers.append(custom_recognizer)
+                    logger.info(f"Added custom regex pattern: {regex_pattern}")
+                except Exception as e:
+                    logger.error(
+                        f"Error adding custom regex pattern '{regex_pattern}': {str(e)}"
+                    )
+
+        # Check if deny list is enabled
+        if config.get("enabledTypes", {}).get("DENY_LIST") and config.get(
+            "denyListTags"
+        ):
+            try:
+                # Create a deny list recognizer
+                deny_list_recognizer = PatternRecognizer(
+                    supported_entity="DENY_LIST",
+                    deny_list=config["denyListTags"],
+                    supported_language="en",
+                )
+
+                ad_hoc_recognizers.append(deny_list_recognizer)
+                logger.info(f"Added deny list with {len(config['denyListTags'])} items")
+            except Exception as e:
+                logger.error(f"Error adding deny list: {str(e)}")
+
+        # Return the list of ad hoc recognizers
+        return ad_hoc_recognizers
+
+    def redact_image(self, image_path: str, config: dict = None) -> str:
         logger.info(f"🖼️ Redacting image from file: {image_path}")
         image = Image.open(image_path)
-        redacted_image, results = self._blur_redact(image)
+
+        # Process configuration if provided
+        allow_list = []
+        if (
+            config
+            and config.get("enabledTypes", {}).get("ALLOW_LIST")
+            and config.get("allowListTags")
+        ):
+            allow_list = config["allowListTags"]
+            logger.info(f"Using allow list with {len(allow_list)} items")
+
+        # Create custom recognizers from config
+        ad_hoc_recognizers = []
+        if config:
+            ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
+            logger.info(
+                f"Created {len(ad_hoc_recognizers)} custom recognizers from configuration"
+            )
+
+        redacted_image, results = self._blur_redact(
+            image, ad_hoc_recognizers, allow_list
+        )
 
         output_path = image_path.replace(".", "-redacted.")
         redacted_image.save(output_path)
@@ -368,13 +440,35 @@ class ImageRedactor:
             }
         )
 
-    def redact_image_base64(self, base64_data: str) -> str:
+    def redact_image_base64(self, base64_data: str, config: dict = None) -> str:
         logger.info("🧠 Redacting image from base64 input")
+
+        # Process configuration if provided
+        allow_list = []
+        if (
+            config
+            and config.get("enabledTypes", {}).get("ALLOW_LIST")
+            and config.get("allowListTags")
+        ):
+            allow_list = config["allowListTags"]
+            logger.info(f"Using allow list with {len(allow_list)} items")
+
+        # Create custom recognizers from config
+        ad_hoc_recognizers = []
+        if config:
+            ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
+            logger.info(
+                f"Created {len(ad_hoc_recognizers)} custom recognizers from configuration"
+            )
+
+        # Process the image data
         image_data = base64.b64decode(
             base64_data.split(",")[1] if "," in base64_data else base64_data
         )
         image = Image.open(BytesIO(image_data))
-        redacted_image, results = self._blur_redact(image)
+        redacted_image, results = self._blur_redact(
+            image, ad_hoc_recognizers, allow_list
+        )
 
         buffered = BytesIO()
         redacted_image.save(buffered, format="PNG")
@@ -391,14 +485,15 @@ class ImageRedactor:
             }
         )
 
-    def _blur_redact(self, image: Image.Image):
+    def _blur_redact(
+        self, image: Image.Image, ad_hoc_recognizers=None, allow_list=None
+    ):
         # Analyze the image for PII entities with higher sensitivity settings
         try:
             # Analyze using image_analyzer's analyze method with appropriate parameters
             results = self.image_analyzer.analyze(
                 image=image,
-                # Only use parameters supported by the version we're using
-                ad_hoc_recognizers=[],
+                ad_hoc_recognizers=ad_hoc_recognizers or [],
             )
 
             logger.info(f"Found {len(results)} entities to redact")
@@ -415,6 +510,24 @@ class ImageRedactor:
         if not results:
             logger.info("No PII entities detected in image")
             return redacted_image, []
+
+        # Filter results based on allow list if provided
+        filtered_results = results
+        if allow_list and len(allow_list) > 0:
+            filtered_results = []
+            for res in results:
+                # Check if the text value is in the allow list
+                if hasattr(res, "text") and res.text in allow_list:
+                    logger.info(
+                        f"Skipping redaction for text in allow list: {res.text}"
+                    )
+                    continue
+                filtered_results.append(res)
+
+            logger.info(
+                f"Filtered {len(results) - len(filtered_results)} items from redaction (allow list)"
+            )
+            results = filtered_results
 
         # Process and apply redactions
         for res in results:
