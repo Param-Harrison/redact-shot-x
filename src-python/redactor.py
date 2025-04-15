@@ -4,8 +4,7 @@ import base64
 import logging
 import re
 from io import BytesIO
-from PIL import Image, ImageFilter, ImageDraw
-from typing import List, Dict, Any, Optional
+from PIL import Image, ImageFilter
 
 from presidio_analyzer import (
     AnalyzerEngine,
@@ -354,7 +353,6 @@ class ImageRedactor:
     def _sanitize_regex_pattern(self, pattern):
         """Sanitize regex pattern by removing strict anchors and making it more flexible for image text."""
         try:
-            # Handle common patterns that might come from the frontend
             # Remove beginning and end anchors
             pattern = pattern.replace("^", "")
             pattern = pattern.replace("$", "")
@@ -367,7 +365,6 @@ class ImageRedactor:
 
             # Special case for purely numeric patterns (like 1050)
             if re.match(r"^\\b\d+\\b$", pattern):
-                # Make it more lenient by removing beginning word boundary
                 pattern = pattern.replace("\\b", "", 1)
 
             return pattern
@@ -396,16 +393,12 @@ class ImageRedactor:
                 try:
                     # Sanitize the pattern to make it more suitable for image text matching
                     sanitized_pattern = self._sanitize_regex_pattern(regex_pattern)
-                    logger.info(
-                        f"Sanitized pattern: {regex_pattern} -> {sanitized_pattern}"
-                    )
 
                     # Create a pattern with the custom regex
                     pattern = Pattern(
                         name=f"custom_pattern_{i}", regex=sanitized_pattern, score=0.75
                     )
                     patterns.append(pattern)
-                    logger.info(f"Added custom regex pattern: {sanitized_pattern}")
                 except Exception as e:
                     logger.error(
                         f"Error adding custom regex pattern '{regex_pattern}': {str(e)}"
@@ -452,7 +445,7 @@ class ImageRedactor:
             and config.get("allowListTags")
         ):
             allow_list = config["allowListTags"]
-            logger.info(f"Using allow list with {len(allow_list)} items: {allow_list}")
+            logger.info(f"Using allow list with {len(allow_list)} items")
 
         if (
             config
@@ -460,15 +453,11 @@ class ImageRedactor:
             and config.get("customRegexes")
         ):
             custom_regexes = config["customRegexes"]
-            logger.info(f"Using custom regexes: {custom_regexes}")
 
         # Create custom recognizers from config
         ad_hoc_recognizers = []
         if config:
             ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
-            logger.info(
-                f"Created {len(ad_hoc_recognizers)} custom recognizers from configuration"
-            )
 
         redacted_image, results = self._blur_redact(
             image, ad_hoc_recognizers, allow_list, custom_regexes
@@ -501,7 +490,7 @@ class ImageRedactor:
             and config.get("allowListTags")
         ):
             allow_list = config["allowListTags"]
-            logger.info(f"Using allow list with {len(allow_list)} items: {allow_list}")
+            logger.info(f"Using allow list with {len(allow_list)} items")
 
         if (
             config
@@ -509,15 +498,11 @@ class ImageRedactor:
             and config.get("customRegexes")
         ):
             custom_regexes = config["customRegexes"]
-            logger.info(f"Using custom regexes: {custom_regexes}")
 
         # Create custom recognizers from config
         ad_hoc_recognizers = []
         if config:
             ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
-            logger.info(
-                f"Created {len(ad_hoc_recognizers)} custom recognizers from configuration"
-            )
 
         # Process the image data
         image_data = base64.b64decode(
@@ -550,13 +535,9 @@ class ImageRedactor:
         allow_list=None,
         custom_regexes=None,
     ):
-        # First, let's extract text from the image to better handle allow list and custom regex
+        # First, let's extract text from the image for allow list and custom regex handling
         extracted_text_dict = None
         has_pytesseract = False
-
-        # Make a debug copy of the image for visualization
-        debug_image = image.copy()
-        debug_draw = ImageDraw.Draw(debug_image)
 
         try:
             import pytesseract
@@ -568,27 +549,10 @@ class ImageRedactor:
             logger.info(
                 f"Extracted {len(extracted_text_dict['text'])} text blocks from image"
             )
-
-            # DEBUG: Draw extracted text boxes on debug image
-            for i, text in enumerate(extracted_text_dict["text"]):
-                if not text.strip():
-                    continue
-
-                left = extracted_text_dict["left"][i]
-                top = extracted_text_dict["top"][i]
-                width = extracted_text_dict["width"][i]
-                height = extracted_text_dict["height"][i]
-
-                # Draw text box in green
-                debug_draw.rectangle(
-                    [left, top, left + width, top + height], outline="green", width=1
-                )
-                debug_draw.text((left, top - 10), f"{text}", fill="green")
-
         except (ImportError, Exception) as e:
             logger.warning(f"Could not use pytesseract for text extraction: {str(e)}")
 
-        # Direct custom redactions from regex patterns
+        # Process custom redactions from regex patterns
         custom_redactions = []
 
         # If we have custom regexes and text extraction worked, find matches directly
@@ -598,7 +562,6 @@ class ImageRedactor:
             and custom_regexes
             and len(custom_regexes) > 0
         ):
-            logger.info("Searching for custom regex matches in extracted text")
             for i, text in enumerate(extracted_text_dict["text"]):
                 text = text.strip()
                 if not text:
@@ -609,10 +572,6 @@ class ImageRedactor:
                 top = extracted_text_dict["top"][i]
                 width = extracted_text_dict["width"][i]
                 height = extracted_text_dict["height"][i]
-
-                logger.info(
-                    f"Checking text block: '{text}' at position ({left}, {top}, {width}, {height})"
-                )
 
                 # Check each regex pattern against this text
                 for regex_pattern in custom_regexes:
@@ -627,60 +586,27 @@ class ImageRedactor:
                         match = pattern.search(text)
                         if match:
                             logger.info(
-                                f"MATCH FOUND! Pattern '{regex_pattern}' matched text '{text}'"
+                                f"Custom regex match: '{regex_pattern}' matched '{text}'"
                             )
 
-                            # Create a dictionary-based result object for redaction
+                            # Create a result object for redaction
                             class CustomRedactionResult:
-                                def __init__(
-                                    self,
-                                    left,
-                                    top,
-                                    width,
-                                    height,
-                                    matched_text,
-                                    pattern,
-                                ):
+                                def __init__(self, left, top, width, height):
                                     self.left = left
                                     self.top = top
                                     self.width = width
                                     self.height = height
                                     self.entity_type = "CUSTOM_REGEX"
-                                    self.text = matched_text
-                                    self.pattern = pattern
 
-                            result = CustomRedactionResult(
-                                left, top, width, height, text, regex_pattern
-                            )
-
-                            # Draw the match in red on debug image
-                            debug_draw.rectangle(
-                                [left, top, left + width, top + height],
-                                outline="red",
-                                width=2,
-                            )
-                            debug_draw.text(
-                                (left, top - 10), f"MATCH: {text}", fill="red"
-                            )
-
+                            result = CustomRedactionResult(left, top, width, height)
                             custom_redactions.append(result)
-                            logger.info(
-                                f"Added custom redaction: {left},{top},{width},{height} for text '{text}'"
-                            )
                             break  # Move to next text block after finding a match
                     except Exception as e:
                         logger.error(
                             f"Error matching pattern '{regex_pattern}': {str(e)}"
                         )
 
-        # Save debug image temporarily
-        try:
-            debug_image.save("/tmp/redaction_debug.png")
-            logger.info("Saved debug image to /tmp/redaction_debug.png")
-        except Exception as e:
-            logger.warning(f"Could not save debug image: {str(e)}")
-
-        # Analyze the image for PII entities with higher sensitivity settings
+        # Analyze the image for PII entities
         try:
             # Analyze using image_analyzer's analyze method with appropriate parameters
             results = self.image_analyzer.analyze(
@@ -688,12 +614,12 @@ class ImageRedactor:
                 ad_hoc_recognizers=ad_hoc_recognizers or [],
             )
 
-            logger.info(f"Found {len(results)} entities to redact via analyzer")
+            logger.info(f"Found {len(results)} entities via analyzer")
         except Exception as e:
             logger.error(f"Error during image analysis: {str(e)}")
             # Fallback to a simpler analyze call if the above fails
             results = self.image_analyzer.analyze(image=image)
-            logger.info(f"Fallback analysis found {len(results)} entities to redact")
+            logger.info(f"Fallback analysis found {len(results)} entities")
 
         # Create a copy of the image to redact
         redacted_image = image.copy()
@@ -703,7 +629,7 @@ class ImageRedactor:
             logger.info("No PII entities detected in image")
             return redacted_image, []
 
-        # Enhanced allow list checking that works better with image text
+        # Apply allow list filtering
         filtered_results = []
         allow_list_ignored = 0
 
@@ -746,9 +672,6 @@ class ImageRedactor:
                             # Check if this text matches any allow list entry
                             for allowed in allow_list:
                                 if allowed.lower() in text.lower():
-                                    logger.info(
-                                        f"Allowing text based on allow list match: '{text}' contains '{allowed}'"
-                                    )
                                     should_redact = False
                                     allow_list_ignored += 1
                                     break
@@ -756,9 +679,6 @@ class ImageRedactor:
                 elif hasattr(res, "text") and res.text:
                     for allowed in allow_list:
                         if allowed.lower() in res.text.lower():
-                            logger.info(
-                                f"Allowing text based on allow list match: '{res.text}' contains '{allowed}'"
-                            )
                             should_redact = False
                             allow_list_ignored += 1
                             break
@@ -767,42 +687,21 @@ class ImageRedactor:
                 filtered_results.append(res)
 
         if allow_list_ignored > 0:
-            logger.info(
-                f"Filtered {allow_list_ignored} items from redaction based on allow list"
-            )
+            logger.info(f"Filtered {allow_list_ignored} items based on allow list")
 
         # Combine filtered results with custom redactions
         all_results = filtered_results + custom_redactions
-        logger.info(f"Total entities to redact after filtering: {len(all_results)}")
-
-        # Log all the items that will be redacted
-        for i, res in enumerate(all_results):
-            entity_type = getattr(res, "entity_type", "UNKNOWN")
-            text = getattr(res, "text", "N/A")
-            left = getattr(res, "left", 0)
-            top = getattr(res, "top", 0)
-            width = getattr(res, "width", 0)
-            height = getattr(res, "height", 0)
-
-            logger.info(
-                f"Redaction #{i+1}: type={entity_type}, text='{text}', box=({left},{top},{width},{height})"
-            )
 
         # Process and apply redactions
         for res in all_results:
             try:
-                # Extract bounding box - with careful attribute access
+                # Extract bounding box with careful attribute access
                 left = int(getattr(res, "left", 0))
                 top = int(getattr(res, "top", 0))
                 width = int(getattr(res, "width", 0))
                 height = int(getattr(res, "height", 0))
                 right = left + width
                 bottom = top + height
-
-                entity_type = getattr(res, "entity_type", "UNKNOWN")
-                logger.info(
-                    f"Applying redaction to {entity_type} at ({left},{top},{width},{height})"
-                )
 
                 # Ensure the coordinates are within image bounds
                 img_width, img_height = redacted_image.size
@@ -813,9 +712,6 @@ class ImageRedactor:
 
                 # Skip if coordinates are invalid
                 if left >= right or top >= bottom:
-                    logger.warning(
-                        f"Skipping invalid coordinates: left={left}, right={right}, top={top}, bottom={bottom}"
-                    )
                     continue
 
                 # Crop the region to blur
@@ -826,9 +722,6 @@ class ImageRedactor:
 
                 # Paste blurred region back to the image
                 redacted_image.paste(blurred_region, (left, top))
-                logger.info(
-                    f"Successfully blurred region at ({left},{top},{width},{height})"
-                )
             except Exception as e:
                 logger.error(f"Error applying redaction: {str(e)}")
 
