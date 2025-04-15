@@ -12,23 +12,6 @@ import { API_URL } from "./constants";
 // Define the type of enabledTypes for improved type safety
 // This is adjusted to match SettingsModal's EnabledTypesRecord type
 type EnabledTypesRecord = {
-  PERSON: boolean;
-  EMAIL_ADDRESS: boolean;
-  PHONE_NUMBER: boolean;
-  URL: boolean;
-  US_SSN: boolean;
-  US_ITIN: boolean;
-  US_PASSPORT: boolean;
-  CREDIT_CARD: boolean;
-  IBAN_CODE: boolean;
-  IP_ADDRESS: boolean;
-  MAC_ADDRESS: boolean;
-  US_BANK_ACCOUNT: boolean;
-  US_BANK_ROUTING: boolean;
-  STREET_ADDRESS: boolean;
-  ZIPCODE: boolean;
-  LOCATION: boolean;
-  DATE: boolean;
   CUSTOM_REGEX: boolean;
   DENY_LIST: boolean;
   ALLOW_LIST: boolean;
@@ -49,10 +32,8 @@ function App() {
   const [allowListInput, setAllowListInput] = useState<string>("");
   const [denyListInput, setDenyListInput] = useState<string>("");
   const [regexPatternInput, setRegexPatternInput] = useState<string>("");
-  const [useContextEnhancement, setUseContextEnhancement] = useState<boolean>(true);
-  const [selectedTab, setSelectedTab] = useState<"redaction" | "advanced">("redaction");
+  const [customRegexes, setCustomRegexes] = useState<string[]>([]);
   const [isDicomImage, setIsDicomImage] = useState<boolean>(false);
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check if user has a system preference for dark mode
@@ -67,41 +48,8 @@ function App() {
   });
   const [apiError, setApiError] = useState<string | null>(null);
   
-  // Updated PII types based on Microsoft Presidio's supported entities
+  // Keep only custom types
   const [enabledTypes, setEnabledTypes] = useState<EnabledTypesRecord>({
-    // Common PII types
-    PERSON: true,
-    EMAIL_ADDRESS: true,
-    PHONE_NUMBER: true,
-    CREDIT_CARD: true,
-    US_SSN: true,
-    
-    // Location entities
-    LOCATION: true,
-    STREET_ADDRESS: true, // Changed from ADDRESS to STREET_ADDRESS
-    ZIPCODE: false,
-    
-    // Financial
-    IBAN_CODE: true,
-    US_BANK_ACCOUNT: true, // Changed from US_BANK_NUMBER
-    US_BANK_ROUTING: false,
-    
-    // Identification
-    US_DRIVER_LICENSE: true,
-    US_PASSPORT: true,
-    US_ITIN: true,
-
-    // Date & Time
-    DATE: true, // Changed from DATE_TIME
-    
-    // Advanced (disabled by default)
-    IP_ADDRESS: false,
-    MAC_ADDRESS: false,
-    DOMAIN_NAME: false,
-    URL: false,
-    NRP: false, // National Provider Identifier
-    MEDICAL_LICENSE: false,
-    
     // Custom
     CUSTOM_REGEX: false,
     DENY_LIST: false,
@@ -113,31 +61,6 @@ function App() {
   const allowListInputRef = useRef<HTMLInputElement>(null);
   const denyListInputRef = useRef<HTMLInputElement>(null);
   const regexPatternInputRef = useRef<HTMLInputElement>(null);
-
-  // Tooltip definitions
-  const tooltips = {
-    redactionMethod: "Choose how sensitive information will be hidden in the image",
-    allowList: "Words in this list will never be redacted, even if they match a PII pattern",
-    denyList: "Words in this list will always be redacted, regardless of whether they match a PII pattern",
-    contextEnhancement: "Analyzes surrounding text to improve accuracy of PII detection",
-    customRegex: "Create your own pattern to detect specific types of information",
-    redactionCount: "Display the number of sensitive items redacted in the image",
-    person: "Detects names of individuals",
-    emailAddress: "Detects email addresses like name@example.com",
-    phoneNumber: "Detects phone numbers in various formats",
-    creditCard: "Detects credit card numbers",
-    usSsn: "Detects US Social Security Numbers",
-    location: "Detects location names like cities, states, countries",
-    address: "Detects physical street addresses",
-    financial: "Detects financial account numbers",
-    identification: "Detects ID document numbers",
-    dateTime: "Detects dates and times",
-    advanced: "Less common PII types that are off by default",
-    domainName: "Detects domain names",
-    url: "Detects web addresses and URLs",
-    nrp: "Detects NRP (National Provider Identifier) numbers",
-    medicalLicense: "Detects medical license numbers",
-  };
 
   // Enhanced viewport handling for orientation changes
   useEffect(() => {
@@ -228,8 +151,7 @@ function App() {
         redactionMethod,
         allowListTags,
         denyListTags,
-        useContextEnhancement,
-        customRegex: regexPatternInput
+        customRegexes
       };
       
       // Call our unified API service that handles both web and Tauri environments
@@ -336,6 +258,20 @@ function App() {
     setDenyListTags(denyListTags.filter(tag => tag !== tagToRemove));
   };
 
+  // Add custom regex pattern
+  const addCustomRegex = () => {
+    if (regexPatternInput.trim() !== '') {
+      setCustomRegexes([...customRegexes, regexPatternInput.trim()]);
+      setRegexPatternInput('');
+      regexPatternInputRef.current?.focus();
+    }
+  };
+
+  // Remove custom regex pattern
+  const removeCustomRegex = (regexToRemove: string) => {
+    setCustomRegexes(customRegexes.filter(regex => regex !== regexToRemove));
+  };
+
   // Handle allow list input key press
   const handleAllowListKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -352,14 +288,12 @@ function App() {
     }
   };
 
-  // Show tooltip
-  const showTooltip = (tooltipId: string) => {
-    setActiveTooltip(tooltipId);
-  };
-
-  // Hide tooltip
-  const hideTooltip = () => {
-    setActiveTooltip(null);
+  // Handle custom regex input key press
+  const handleCustomRegexKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCustomRegex();
+    }
   };
 
   // Open settings modal
@@ -491,19 +425,14 @@ function App() {
         setRedactionMethod={setRedactionMethod}
         enabledTypes={enabledTypes}
         toggleRedactionType={toggleRedactionType}
-        showRedactionCount={showRedactionCount}
-        setShowRedactionCount={setShowRedactionCount}
         allowListTags={allowListTags}
         denyListTags={denyListTags}
         allowListInput={allowListInput}
         denyListInput={denyListInput}
         regexPatternInput={regexPatternInput}
-        useContextEnhancement={useContextEnhancement}
-        isDicomImage={isDicomImage}
         setAllowListInput={setAllowListInput}
         setDenyListInput={setDenyListInput}
         setRegexPatternInput={setRegexPatternInput}
-        setUseContextEnhancement={setUseContextEnhancement}
         addAllowListTag={addAllowListTag}
         addDenyListTag={addDenyListTag}
         removeAllowListTag={removeAllowListTag}
@@ -513,14 +442,11 @@ function App() {
         allowListInputRef={allowListInputRef}
         denyListInputRef={denyListInputRef}
         regexPatternInputRef={regexPatternInputRef}
-        activeTooltip={activeTooltip}
-        showTooltip={showTooltip}
-        hideTooltip={hideTooltip}
-        tooltips={tooltips}
-        selectedTab={selectedTab}
-        setSelectedTab={setSelectedTab}
-        customRegexes={[]}
-        setCustomRegexes={() => {}}
+        customRegexes={customRegexes}
+        addCustomRegex={addCustomRegex}
+        removeCustomRegex={removeCustomRegex}
+        handleCustomRegexKeyPress={handleCustomRegexKeyPress}
+        setCustomRegexes={setCustomRegexes}
         darkMode={darkMode}
       />
     </main>

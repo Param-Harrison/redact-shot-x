@@ -3,10 +3,7 @@ import json
 import base64
 import logging
 from io import BytesIO
-from typing import Optional
 from PIL import Image, ImageFilter
-import numpy as np
-import cv2
 
 from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
