@@ -27,6 +27,7 @@ RedactShotX is available in two flavors:
 - **Frontend**: React.js for the user interface
 - **Application Wrapper**: Tauri (Rust) for cross-platform desktop support
 - **Redaction Engine**: Python with Microsoft Presidio for powerful PII detection and redaction
+- **Python Sidecar**: The Python backend is packaged as a sidecar executable using PyInstaller
 
 ### 2. Web App Version
 
@@ -51,10 +52,10 @@ These scripts start both the backend API server and frontend in one step:
 
 ```bash
 # On Unix/macOS
-./run-web-app.sh
+./run-app.sh
 
 # On Windows
-run-web-app.bat
+# Use PowerShell or Command Prompt to run the Python backend and frontend separately
 ```
 
 #### Option 2: Manual startup
@@ -62,11 +63,9 @@ run-web-app.bat
 1. Start the Python backend in a terminal:
 
    ```bash
-   # On Unix/macOS
-   ./start-api-server.sh
-
-   # On Windows
-   start-api-server.bat
+   cd src-python
+   pip install -e .
+   uvicorn api:app --host 127.0.0.1 --port 8000
    ```
 
 2. In a separate terminal, start the React frontend:
@@ -79,9 +78,37 @@ The web app will be available at http://localhost:3000.
 
 ### Running the Tauri Desktop App
 
-```bash
-npm run tauri dev
-```
+#### Development Mode
+
+1. Build the Python sidecar for your platform:
+
+   ```bash
+   # Build for your current platform
+   ./run-app.sh --build-sidecar
+
+   # Or use the specific npm scripts
+   # For Windows
+   npm run build:sidecar-win
+
+   # For macOS (Intel)
+   npm run build:sidecar-mac-intel
+
+   # For macOS (Apple Silicon)
+   npm run build:sidecar-mac-apple
+
+   # For Linux
+   npm run build:sidecar-linux
+   ```
+
+2. Start the Tauri app with the sidecar:
+
+   ```bash
+   # Using the convenience script
+   ./run-app.sh --tauri
+
+   # Or directly with npm
+   npm run tauri dev
+   ```
 
 ## 📦 Building for Production
 
@@ -103,8 +130,20 @@ The built files will be in `dist-web/`.
 # Install dependencies
 npm install
 
-# Build the app
+# Build the Python sidecar for all platforms (requires appropriate Python environment for each)
+npm run build:sidecar-all
+
+# Or build for a specific platform
+npm run build:sidecar-win  # Windows
+npm run build:sidecar-mac-intel  # macOS (Intel)
+npm run build:sidecar-mac-apple  # macOS (Apple Silicon)
+npm run build:sidecar-linux  # Linux
+
+# Build the Tauri app (this will use the sidecar built in the previous step)
 npm run tauri build
+
+# Or use the combined command to build sidecar and Tauri app
+npm run tauri:build
 ```
 
 The built binaries will be in `src-tauri/target/release/bundle/`.
@@ -116,6 +155,7 @@ The built binaries will be in `src-tauri/target/release/bundle/`.
 - **Backend API**: Python, FastAPI
 - **Redaction Engine**: Microsoft Presidio
 - **OCR**: Tesseract (via Presidio)
+- **Python Packaging**: PyInstaller for creating standalone executables
 
 ## 📚 Documentation
 
@@ -250,3 +290,11 @@ The tech stack is intentionally left open to allow platform-specific optimizatio
 3. Backend performs OCR → detects PII → applies redactions → saves `redacted.png`
 4. Frontend updates canvas to show `redacted.png`
 5. User clicks Export → saves redacted image
+
+## Python Sidecar Implementation Notes
+
+- The Python backend is packaged as a standalone executable using PyInstaller
+- In development mode, you can use the Python code directly
+- In production, the executable is bundled with the Tauri app
+- The sidecar starts automatically when the app starts and shuts down when the app closes
+- Communication between the frontend and sidecar happens via HTTP

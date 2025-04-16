@@ -80,15 +80,34 @@ if [ -f "pyproject.toml" ]; then
   echo -e "${YELLOW}📦 Installing Python dependencies...${NC}"
   pip install --upgrade pip setuptools wheel
   pip install .
-  pip install watchfiles
+  pip install watchfiles pyinstaller
 else
   echo -e "${RED}❌ pyproject.toml not found.${NC}"
   exit 1
 fi
 
+cd ..
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Build sidecar for development
+if [ "${1}" == "--build-sidecar" ] || [ -n "${BUILD_SIDECAR}" ]; then
+  echo -e "${YELLOW}🔧 Building Python sidecar for development...${NC}"
+  
+  # Use our shell script to build the sidecar
+  ./scripts/build-sidecar.sh
+  
+  echo -e "${GREEN}✅ Sidecar build complete${NC}"
+  
+  # If only building sidecar, exit
+  if [ "${1}" == "--build-sidecar" ]; then
+    exit 0
+  fi
+fi
+
 # ────────────────────────────────────────────────────────────────────────────────
 # Start FastAPI with watchfiles (auto-reload)
 echo -e "${YELLOW}⚙ Starting FastAPI backend with watchfiles...${NC}"
+cd src-python
 watchfiles "uvicorn api:app --host 127.0.0.1 --port 8000" . &
 PYTHON_PID=$!
 
@@ -111,8 +130,14 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
-echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"
-echo -e "${GREEN}Frontend running at → http://localhost:3000${NC}"
-echo -e "${YELLOW}🛑 Press Ctrl+C to stop everything${NC}"
-
-npx vite --config vite.web.config.ts
+# Determine whether to start Tauri or web mode
+if [ "${1}" == "--tauri" ]; then
+  echo -e "${GREEN}🚀 Starting app in Tauri mode...${NC}"
+  npm run tauri dev
+else
+  echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"
+  echo -e "${GREEN}Frontend running at → http://localhost:3000${NC}"
+  echo -e "${YELLOW}🛑 Press Ctrl+C to stop everything${NC}"
+  
+  npx vite --config vite.web.config.ts
+fi

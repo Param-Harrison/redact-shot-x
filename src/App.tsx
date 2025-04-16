@@ -32,7 +32,6 @@ function App() {
   const [denyListInput, setDenyListInput] = useState<string>("");
   const [regexPatternInput, setRegexPatternInput] = useState<string>("");
   const [customRegexes, setCustomRegexes] = useState<string[]>([]);
-  const [isDicomImage, setIsDicomImage] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check if user has a system preference for dark mode
@@ -127,9 +126,6 @@ function App() {
     // Save the original filename
     setOriginalFileName(file.name);
     
-    // Check if it's a DICOM image
-    setIsDicomImage(file.name.endsWith('.dcm'));
-
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target && typeof e.target.result === 'string') {
@@ -254,7 +250,6 @@ function App() {
     setImage(null);
     setRedactedImage(null);
     setRedactionCount(0);
-    setIsDicomImage(false);
     // Reset scroll position
     window.scrollTo(0, 0);
   };
