@@ -383,8 +383,9 @@ function App() {
                     <polyline points="22 4 12 14.01 9 11.01"></polyline>
                   </svg>
                 </div>
-                <p>Redaction complete with <span className="redaction-method">{redactionMethod === "blur" ? "Blur" : "Black Box"}</span> method</p>
                 
+                <p>Redaction complete using the <span className="redaction-method">{redactionMethod === "blur" ? "Blur" : "Black Box"}</span> method. Please verify the result, as not all sensitive data can be automatically detected.</p>
+
                 {redactionCount > 0 ? (
                   <div className="redaction-count">
                     <span className="redaction-count-value">{redactionCount}</span> 

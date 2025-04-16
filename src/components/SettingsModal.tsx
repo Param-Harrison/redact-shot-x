@@ -7,7 +7,7 @@ const Toast = ({ message, visible, onClose }: { message: string; visible: boolea
     if (visible) {
       const timer = setTimeout(() => {
         onClose();
-      }, 3000); // Auto-hide after 3 seconds
+      }, 1000); // Auto-hide after 1 second
       
       return () => clearTimeout(timer);
     }
@@ -162,10 +162,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // Handle save and close with toast notification
   const handleSaveAndClose = () => {
     setToastVisible(true);
-    // Still call closeSettings but with a slight delay to show toast
+    // Wait for the toast to complete before closing the modal
     setTimeout(() => {
+      setToastVisible(false);
       closeSettings();
-    }, 1000);
+    }, 1500); // Close modal after 1.5 seconds (toast shows for 1 second)
   };
 
   if (!isOpen) return null;

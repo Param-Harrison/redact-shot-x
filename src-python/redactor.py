@@ -717,7 +717,7 @@ class ImageRedactor:
                 # Crop the region to blur
                 region = redacted_image.crop((left, top, right, bottom))
 
-                # Apply stronger blur to the cropped region
+                # Apply strong blur to the cropped region
                 blurred_region = region.filter(ImageFilter.GaussianBlur(radius=15))
 
                 # Paste blurred region back to the image
