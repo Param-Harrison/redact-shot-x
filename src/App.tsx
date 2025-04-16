@@ -60,6 +60,7 @@ function App() {
   const allowListInputRef = useRef<HTMLInputElement>(null);
   const denyListInputRef = useRef<HTMLInputElement>(null);
   const regexPatternInputRef = useRef<HTMLInputElement>(null);
+  const [originalFileName, setOriginalFileName] = useState<string>("redacted-image");
 
   // Enhanced viewport handling for orientation changes
   useEffect(() => {
@@ -96,6 +97,7 @@ function App() {
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
+      setOriginalFileName(file.name);
       handleImageFile(file);
     }
   };
@@ -122,6 +124,9 @@ function App() {
       return;
     }
 
+    // Save the original filename
+    setOriginalFileName(file.name);
+    
     // Check if it's a DICOM image
     setIsDicomImage(file.name.endsWith('.dcm'));
 
@@ -189,15 +194,40 @@ function App() {
       try {
         // For base64 images, convert to blob for download
         const base64Data = redactedImage.split(';base64,').pop() || '';
-        const blob = await fetch(`data:image/png;base64,${base64Data}`).then(res => res.blob());
+        const mimeType = redactedImage.split(';')[0].split(':')[1];
+        const blob = await fetch(`data:${mimeType};base64,${base64Data}`).then(res => res.blob());
         
         // Create object URL for the blob
         const blobUrl = URL.createObjectURL(blob);
         
+        // Generate the output filename with "-redacted" suffix
+        const generateRedactedFilename = (original: string) => {
+          // Split filename by last period to separate name and extension
+          const lastDotIndex = original.lastIndexOf('.');
+          
+          if (lastDotIndex === -1) {
+            // No extension found
+            return `${original}-redacted`;
+          }
+          
+          const name = original.substring(0, lastDotIndex);
+          const extension = original.substring(lastDotIndex + 1);
+          
+          // Don't append -redacted if it's already there
+          if (name.endsWith('-redacted')) {
+            return original;
+          }
+          
+          return `${name}-redacted.${extension}`;
+        };
+        
+        // Generate the filename
+        const fileName = generateRedactedFilename(originalFileName);
+        
         // Create link and trigger download
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = isDicomImage ? 'redacted-image.dcm' : 'redacted-image.png';
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

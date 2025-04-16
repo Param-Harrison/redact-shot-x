@@ -5,6 +5,7 @@ import logging
 import re
 from io import BytesIO
 from PIL import Image, ImageFilter
+import os
 
 from presidio_analyzer import (
     AnalyzerEngine,
@@ -434,6 +435,7 @@ class ImageRedactor:
     def redact_image(self, image_path: str, config: dict = None) -> str:
         logger.info(f"🖼️ Redacting image from file: {image_path}")
         image = Image.open(image_path)
+        original_format = image.format  # Save the original image format
 
         # Process configuration if provided
         allow_list = []
@@ -463,8 +465,32 @@ class ImageRedactor:
             image, ad_hoc_recognizers, allow_list, custom_regexes
         )
 
-        output_path = image_path.replace(".", "-redacted.")
-        redacted_image.save(output_path)
+        # Generate output filename with proper handling to avoid double -redacted suffix
+        def generate_redacted_filename(path):
+            # Split the path into directory, name, and extension
+            dirname, filename = os.path.split(path)
+            name, ext = os.path.splitext(filename)
+
+            # Remove any existing -redacted suffix
+            if name.endswith("-redacted"):
+                name = name[:-9]  # remove the '-redacted' part
+
+            # Create the new path
+            new_filename = f"{name}-redacted{ext}"
+            return os.path.join(dirname, new_filename)
+
+        output_path = generate_redacted_filename(image_path)
+
+        # Save with the original format if possible, fallback to PNG
+        try:
+            redacted_image.save(output_path, format=original_format)
+        except Exception as e:
+            logger.warning(
+                f"Could not save in original format {original_format}: {e}. Falling back to PNG."
+            )
+            # If original format saving fails, try PNG as fallback
+            output_path = output_path.rsplit(".", 1)[0] + ".png"
+            redacted_image.save(output_path, format="PNG")
 
         logger.info(
             f"✅ Redacted {len(results)} elements from image: {', '.join(set(r.entity_type for r in results))}"
@@ -508,13 +534,43 @@ class ImageRedactor:
         image_data = base64.b64decode(
             base64_data.split(",")[1] if "," in base64_data else base64_data
         )
+
+        # Extract MIME type from the base64 data
+        mime_type = "image/png"  # Default
+        if "," in base64_data and ":" in base64_data.split(",")[0]:
+            mime_type = base64_data.split(",")[0].split(":")[1].split(";")[0]
+
         image = Image.open(BytesIO(image_data))
+        original_format = image.format  # Save the original format
+
+        # Map MIME type to PIL format
+        mime_to_format = {
+            "image/png": "PNG",
+            "image/jpeg": "JPEG",
+            "image/jpg": "JPEG",
+            "image/gif": "GIF",
+            "image/bmp": "BMP",
+            "image/webp": "WEBP",
+            "image/tiff": "TIFF",
+        }
+
+        # Determine format for saving
+        save_format = mime_to_format.get(mime_type, original_format or "PNG")
+
         redacted_image, results = self._blur_redact(
             image, ad_hoc_recognizers, allow_list, custom_regexes
         )
 
         buffered = BytesIO()
-        redacted_image.save(buffered, format="PNG")
+        try:
+            redacted_image.save(buffered, format=save_format)
+        except Exception as e:
+            logger.warning(
+                f"Could not save in format {save_format}: {e}. Falling back to PNG."
+            )
+            save_format = "PNG"
+            redacted_image.save(buffered, format=save_format)
+
         redacted_base64 = base64.b64encode(buffered.getvalue()).decode()
 
         logger.info(
@@ -523,7 +579,7 @@ class ImageRedactor:
         return json.dumps(
             {
                 "success": True,
-                "redactedImage": f"data:image/png;base64,{redacted_base64}",
+                "redactedImage": f"data:{mime_type};base64,{redacted_base64}",
                 "redactionCount": len(results),
             }
         )
