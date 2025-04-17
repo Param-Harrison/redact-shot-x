@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 use std::time::Duration;
+use tauri::Manager;
 
 // Store the sidecar process handle to manage its lifecycle
 static API_SERVER_HANDLE: once_cell::sync::Lazy<Arc<Mutex<Option<u32>>>> =
@@ -429,8 +430,20 @@ fn main() {
         .setup(|app| {
             // Start API server at app startup for better UX
             let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = start_api_server(app_handle.clone()).await {
+            
+            // Use a dedicated thread rather than async runtime to start the API server
+            std::thread::spawn(move || {
+                // First clean up any existing processes
+                println!("Cleaning up any existing API processes before starting...");
+                let _ = find_and_kill_api_processes();
+                
+                // Use a blocking runtime for the async start operation
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                
+                if let Err(e) = rt.block_on(start_api_server(app_handle.clone())) {
                     eprintln!("Failed to start API server: {}", e);
                 } else {
                     println!("API server started successfully!");
@@ -450,11 +463,11 @@ fn main() {
                 
                 println!("Window close requested, stopping API server...");
                 
-                // Get a handle to the app
-                let app_handle = window.app_handle();
+                // Create a hard copy of needed state to avoid async issues
+                let app = window.app_handle();
                 
-                // Spawn a new task to handle shutdown
-                tauri::async_runtime::spawn(async move {
+                // Create a separate thread for cleanup to avoid blocking async context
+                std::thread::spawn(move || {
                     // Clean up API server before closing
                     let attempts = 3;
                     for i in 1..=attempts {
