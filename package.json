@@ -10,11 +10,12 @@
     "tauri": "tauri",
     "web": "vite --config vite.web.config.ts",
     "build:web": "tsc && vite build --config vite.web.config.ts",
-    "build:sidecar-win": "pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py",
-    "build:sidecar-mac-intel": "pyinstaller -c -F --clean --name api_mac_intel --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py",
-    "build:sidecar-mac-apple": "pyinstaller -c -F --clean --name api_mac_apple --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py",
-    "build:sidecar-linux": "pyinstaller -c -F --clean --name api_linux --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py",
-    "build:sidecar-all": "npm run build:sidecar-win && npm run build:sidecar-mac-intel && npm run build:sidecar-mac-apple && npm run build:sidecar-linux",
+    "build:sidecar-windows": "bash scripts/build-sidecar.sh windows",
+    "build:sidecar-mac": "bash scripts/build-sidecar.sh mac-apple",
+    "build:sidecar-mac-intel": "bash scripts/build-sidecar.sh mac-intel",
+    "build:sidecar-linux": "bash scripts/build-sidecar.sh linux",
+    "build:sidecar": "bash scripts/build-sidecar.sh",
+    "build:sidecar-all": "npm run build:sidecar-windows && npm run build:sidecar-mac && npm run build:sidecar-mac-intel && npm run build:sidecar-linux",
     "tauri:build": "npm run build:sidecar-all && npm run tauri build"
   },
   "dependencies": {

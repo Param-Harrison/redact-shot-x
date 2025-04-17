@@ -35,7 +35,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "bin/api/api"
+      "bin/api"
     ],
     "resources": [],
     "copyright": "",

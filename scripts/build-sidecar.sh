@@ -37,7 +37,7 @@ fi
 echo -e "${GREEN}Building Python sidecar for $PLATFORM...${NC}"
 
 # Ensure directories exist
-mkdir -p src-tauri/bin/api
+mkdir -p src-tauri/bin
 
 # Ensure pyinstaller is installed
 echo -e "${YELLOW}Checking for PyInstaller...${NC}"
@@ -59,19 +59,19 @@ fi
 case "$PLATFORM" in
   "windows")
     echo -e "${GREEN}Building for Windows...${NC}"
-    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py
+    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
     ;;
   "mac-intel")
     echo -e "${GREEN}Building for macOS (Intel)...${NC}"
-    pyinstaller -c -F --clean --name api_mac_intel --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py
+    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
     ;;
   "mac-apple")
     echo -e "${GREEN}Building for macOS (Apple Silicon)...${NC}"
-    pyinstaller -c -F --clean --name api_mac_apple --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py
+    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
     ;;
   "linux")
     echo -e "${GREEN}Building for Linux...${NC}"
-    pyinstaller -c -F --clean --name api_linux --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin/api src-python/api.py
+    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
     ;;
   *)
     echo -e "${RED}Unsupported platform: $PLATFORM${NC}"
