@@ -6,7 +6,7 @@ import DropZone from "./components/DropZone";
 import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
 import SettingsModal, { EnabledTypesRecord as SettingsEnabledTypesRecord } from "./components/SettingsModal";
-import { processImage as processImageApi } from "./services/api";
+import { processImage as processImageApi, cleanupApiServer, checkApiStatus, ensureApiRunning } from "./services/api";
 import { API_URL } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
@@ -33,6 +33,8 @@ function App() {
   const [regexPatternInput, setRegexPatternInput] = useState<string>("");
   const [customRegexes, setCustomRegexes] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState<'unknown' | 'running' | 'error'>('unknown');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check if user has a system preference for dark mode
     const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -44,7 +46,6 @@ function App() {
     
     return prefersDarkMode;
   });
-  const [apiError, setApiError] = useState<string | null>(null);
   
   // Keep only custom types
   const [enabledTypes, setEnabledTypes] = useState<EnabledTypesRecord>({
@@ -89,10 +90,87 @@ function App() {
     };
   }, []);
 
+  // Check API status periodically
+  useEffect(() => {
+    // Check API status on app load
+    const checkApi = async () => {
+      try {
+        const isRunning = await checkApiStatus();
+        if (isRunning) {
+          setApiStatus('running');
+          setApiError(null);
+        } else {
+          // If not running, try to start it (in Tauri mode)
+          const started = await ensureApiRunning();
+          if (started) {
+            setApiStatus('running');
+            setApiError(null);
+          } else {
+            setApiStatus('error');
+            setApiError('Could not connect to the API server');
+          }
+        }
+      } catch (error) {
+        setApiStatus('error');
+        setApiError('Error checking API status');
+      }
+    };
+    
+    // Run the initial check
+    checkApi();
+    
+    // Set up periodic checks (every 10 seconds)
+    const intervalId = setInterval(checkApi, 10000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup function to ensure API server is stopped
+      cleanupApiServer();
+      
+      // Clear any large data from memory
+      cleanupImageData();
+    };
+  }, []);
+
+  // Function to clean up image data and help GC
+  const cleanupImageData = () => {
+    if (image) {
+      setImage(null);
+      URL.revokeObjectURL(image.startsWith('blob:') ? image : '');
+    }
+    if (redactedImage) {
+      setRedactedImage(null);
+      URL.revokeObjectURL(redactedImage.startsWith('blob:') ? redactedImage : '');
+    }
+  };
+
+  // Handle API retry
+  const handleApiRetry = async () => {
+    setApiStatus('unknown');
+    setApiError('Attempting to reconnect to API...');
+    const started = await ensureApiRunning();
+    if (started) {
+      setApiStatus('running');
+      setApiError(null);
+    } else {
+      setApiStatus('error');
+      setApiError('Failed to start or connect to the API server.');
+    }
+  };
+
   // Handle file drop
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
+    
+    // Clean up previous image data
+    cleanupImageData();
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
@@ -107,6 +185,7 @@ function App() {
       if (e.clipboardData && e.clipboardData.files.length > 0) {
         const file = e.clipboardData.files[0];
         if (file.type.startsWith('image/')) {
+          cleanupImageData(); // Clean up previous image data
           handleImageFile(file);
         }
       }
@@ -118,6 +197,12 @@ function App() {
 
   // Process image file
   const handleImageFile = (file: File) => {
+    // Check API status first
+    if (apiStatus === 'error') {
+      setApiError('Cannot process image: API server is not running. Please try reconnecting.');
+      return;
+    }
+
     if (!file.type.match('image.*') && !file.name.endsWith('.dcm')) {
       // Show error for non-image files
       return;
@@ -136,6 +221,13 @@ function App() {
         window.scrollTo(0, 0);
       }
     };
+    
+    // Set up error handler
+    reader.onerror = () => {
+      console.error("FileReader error:", reader.error);
+      reader.abort();
+    };
+    
     reader.readAsDataURL(file);
   };
 
@@ -145,6 +237,11 @@ function App() {
     setApiError(null);
     
     try {
+      // Check API status before processing
+      if (apiStatus === 'error') {
+        throw new Error('API server is not running. Please check the connection or try restarting.');
+      }
+      
       // Create configuration object for Python backend
       const config = {
         enabledTypes,
@@ -158,6 +255,11 @@ function App() {
       const result = await processImageApi(imageData, config);
       
       if (result.success) {
+        // Clear old redacted image if it exists
+        if (redactedImage) {
+          URL.revokeObjectURL(redactedImage.startsWith('blob:') ? redactedImage : '');
+        }
+        
         setRedactedImage(result.redactedImage);
         setRedactionCount(result.redactionCount);
       } else {
@@ -167,8 +269,18 @@ function App() {
     } catch (error) {
       console.error("Error processing image:", error);
       setApiError(error instanceof Error ? error.message : 'Failed to connect to API server');
+      setApiStatus('error'); // Mark API as having an error if processing fails
     } finally {
       setIsProcessing(false);
+      
+      // Force garbage collection through reference removal
+      // The imageData parameter will be cleaned up by the API service
+      try {
+        // In browser environments, we rely on JavaScript's garbage collection
+        // We've already cleaned up references which is the best we can do
+      } catch (e) {
+        console.log("Error during cleanup:", e);
+      }
     }
   };
 
@@ -180,6 +292,8 @@ function App() {
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      // Clean up previous image data
+      cleanupImageData();
       handleImageFile(e.target.files[0]);
     }
   };
@@ -382,6 +496,15 @@ function App() {
             accept="image/*,.dcm" 
             style={{ display: 'none' }} 
           />
+          {apiStatus === 'error' && (
+            <div className="api-error-banner">
+              <p>Error: {apiError || 'Cannot connect to API server'}</p>
+              <p>The API server at {API_URL} is not responding.</p>
+              <button onClick={handleApiRetry} className="retry-button">
+                Retry Connection
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <div className="content-area" ref={contentRef}>
@@ -389,6 +512,11 @@ function App() {
             <div className="api-error-message">
               <p>Error: {apiError}</p>
               <p>Make sure the Python API server is running at {API_URL}</p>
+              {apiStatus === 'error' && (
+                <button onClick={handleApiRetry} className="retry-button">
+                  Retry Connection
+                </button>
+              )}
             </div>
           )}
           

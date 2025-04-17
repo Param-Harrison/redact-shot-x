@@ -2898,3 +2898,43 @@ body, .app-container, .settings-modal-content {
   box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.15);
 }
 
+.api-error-banner {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px;
+  margin: 20px auto;
+  border-radius: 4px;
+  max-width: 600px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .api-error-banner {
+  background-color: #3d1c24;
+  color: #f8d7da;
+}
+
+.retry-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background-color: #0069d9;
+}
+
+.dark-mode .retry-button {
+  background-color: #0069d9;
+}
+
+.dark-mode .retry-button:hover {
+  background-color: #0059c9;
+}
+

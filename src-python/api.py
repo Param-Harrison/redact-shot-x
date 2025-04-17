@@ -37,6 +37,14 @@ async def root():
     return {"status": "ok", "message": "RedactShotX API is running"}
 
 
+@app.get("/health")
+async def health_check():
+    """
+    Simple health check endpoint to verify the API is operational.
+    """
+    return {"status": "ok", "message": "API is healthy"}
+
+
 @app.post("/redact/upload")
 async def redact_uploaded_image(
     file: UploadFile = File(...), config_json: str = Form(None)

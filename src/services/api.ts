@@ -2,6 +2,9 @@ import { API_URL, isTauri, log } from '../constants';
 
 // Initialize invoke as null
 let invoke: any = null;
+// Track the number of retries for API operations
+let apiRetries = 0;
+const MAX_API_RETRIES = 3;
 
 // In web mode, we skip the Tauri imports completely
 if (typeof window !== 'undefined' && isTauri) {
@@ -26,6 +29,91 @@ const safeDynamicImport = async (modulePath: string) => {
   }
 };
 
+// Initialize Tauri API if in Tauri environment
+const initTauriApi = async () => {
+  if (isTauri && invoke === null) {
+    try {
+      // Load Tauri API at runtime using our safe import method
+      const tauri = await safeDynamicImport('@tauri-apps/api/tauri');
+      if (tauri) {
+        invoke = tauri.invoke;
+        log('Successfully loaded Tauri API');
+        return true;
+      }
+    } catch (e) {
+      log('Could not load Tauri API, falling back to web mode');
+    }
+  }
+  return Boolean(isTauri && invoke);
+};
+
+/**
+ * Check if the API server is running
+ */
+export const checkApiStatus = async (): Promise<boolean> => {
+  try {
+    // If we're in Tauri mode, use Tauri's check_api_status function
+    if (await initTauriApi()) {
+      return await invoke('check_api_status');
+    }
+    
+    // In web mode, try to ping the API directly
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    
+    try {
+      const response = await fetch(`${API_URL}/health`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response.ok;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      return false;
+    }
+  } catch (error) {
+    log('Error checking API status:', error);
+    return false;
+  }
+};
+
+/**
+ * Ensure API server is running
+ */
+export const ensureApiRunning = async (): Promise<boolean> => {
+  // Check if API is already running
+  if (await checkApiStatus()) {
+    log('API server is already running');
+    apiRetries = 0;
+    return true;
+  }
+  
+  // If we're in Tauri mode, try to start the API server
+  if (await initTauriApi()) {
+    if (apiRetries >= MAX_API_RETRIES) {
+      log('Exceeded maximum API server start retries');
+      return false;
+    }
+    
+    apiRetries++;
+    log(`Attempting to start API server (attempt ${apiRetries})`);
+    
+    try {
+      await invoke('start_api_server');
+      // Wait for server to start
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return await checkApiStatus();
+    } catch (error) {
+      log('Error starting API server:', error);
+      return false;
+    }
+  }
+  
+  // In web mode, we can't start the API server
+  return false;
+};
+
 /**
  * Process image with redaction
  * @param imageData Base64 encoded image
@@ -34,31 +122,18 @@ const safeDynamicImport = async (modulePath: string) => {
  */
 export const processImage = async (imageData: string, config: any) => {
   try {
-    // Check if we're in Tauri environment AND we haven't already tried to load the API
-    if (isTauri && invoke === null) {
-      try {
-        // Load Tauri API at runtime using our safe import method
-        const tauri = await safeDynamicImport('@tauri-apps/api/tauri');
-        if (tauri) {
-          invoke = tauri.invoke;
-          log('Successfully loaded Tauri API');
-        }
-      } catch (e) {
-        log('Could not load Tauri API, falling back to web mode');
-      }
+    // Check if we're in Tauri environment
+    const hasTauriApi = await initTauriApi();
+    
+    // Make sure API is running, especially in Tauri mode
+    if (hasTauriApi && !(await ensureApiRunning())) {
+      throw new Error('Failed to start or connect to API server');
     }
-
+    
     // If we have invoke available from Tauri, use it
-    if (isTauri && invoke) {
+    if (hasTauriApi) {
       // Tauri implementation
       log('Using Tauri backend for image processing');
-      
-      // Start API server if needed (this is Tauri-specific)
-      try {
-        await invoke('start_api_server');
-      } catch (e) {
-        log('API server start error (may already be running):', e);
-      }
       
       // Call Tauri command to process the image
       const result = await invoke('redact_base64_image', {
@@ -94,5 +169,33 @@ export const processImage = async (imageData: string, config: any) => {
   } catch (error) {
     log('Error in processImage:', error);
     throw error;
+  } finally {
+    // Help free memory by removing references to large data
+    imageData = ''; // Allow GC to collect this large string
   }
-}; 
+};
+
+/**
+ * Clean up and stop API server when app is closing
+ */
+export const cleanupApiServer = async () => {
+  try {
+    // Check if we're in Tauri environment
+    const hasTauriApi = await initTauriApi();
+    
+    if (hasTauriApi) {
+      log('Stopping API server...');
+      await invoke('stop_api_server');
+      log('API server stopped successfully');
+    }
+  } catch (error) {
+    log('Error stopping API server:', error);
+  }
+};
+
+// Register window close event listener to clean up
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', async () => {
+    await cleanupApiServer();
+  });
+} 

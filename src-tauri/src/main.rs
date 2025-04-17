@@ -4,10 +4,15 @@
 use std::sync::{Arc, Mutex};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
+use std::time::Duration;
 
 // Store the sidecar process handle to manage its lifecycle
 static API_SERVER_HANDLE: once_cell::sync::Lazy<Arc<Mutex<Option<u32>>>> =
     once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(None)));
+
+// Flag to track if window close is already in progress
+static IS_CLOSING: once_cell::sync::Lazy<Arc<Mutex<bool>>> =
+    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(false)));
 
 // Function to start the API server using Tauri's sidecar mechanism
 #[tauri::command]
@@ -19,6 +24,9 @@ async fn start_api_server(app: tauri::AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
+    // Log that we're starting the server
+    println!("Starting API server...");
+    
     // Get the sidecar command
     let sidecar = app
         .shell()
@@ -31,6 +39,7 @@ async fn start_api_server(app: tauri::AppHandle) -> Result<(), String> {
 
     // Store the process ID
     *process_guard = Some(child.pid());
+    println!("API server started with PID: {}", child.pid());
 
     // Handle process events in a separate task
     tauri::async_runtime::spawn(async move {
@@ -44,11 +53,72 @@ async fn start_api_server(app: tauri::AppHandle) -> Result<(), String> {
                 CommandEvent::Error(err) => {
                     eprintln!("API server process error: {}", err);
                 }
+                CommandEvent::Stdout(line) => {
+                    println!("API server: {}", String::from_utf8_lossy(&line));
+                }
+                CommandEvent::Stderr(line) => {
+                    eprintln!("API server error: {}", String::from_utf8_lossy(&line));
+                }
                 _ => {}
             }
         }
     });
 
+    // Wait briefly to give the API server time to start
+    std::thread::sleep(Duration::from_millis(500));
+    
+    // Try basic health check (without all the fancy tokio stuff)
+    match reqwest::blocking::Client::new()
+        .get("http://127.0.0.1:1426/health")
+        .timeout(Duration::from_secs(2))
+        .send() {
+        Ok(response) => {
+            if response.status().is_success() {
+                println!("API server is responding and healthy");
+            } else {
+                println!("API server is running but returned non-success status: {}", response.status());
+            }
+        }
+        Err(e) => {
+            println!("Warning: API server started but health check failed: {}", e);
+        }
+    }
+
+    Ok(())
+}
+
+// Function to stop the API server
+#[tauri::command]
+fn stop_api_server() -> Result<(), String> {
+    let mut process_guard = API_SERVER_HANDLE.lock().unwrap();
+    
+    if let Some(pid) = *process_guard {
+        println!("Stopping API server with PID: {}", pid);
+        
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+            Command::new("taskkill")
+                .args(["/F", "/PID", &pid.to_string()])
+                .output()
+                .map_err(|e| format!("Failed to kill process: {}", e))?;
+        }
+        
+        #[cfg(not(target_os = "windows"))]
+        {
+            use std::process::Command;
+            Command::new("kill")
+                .arg(pid.to_string())
+                .output()
+                .map_err(|e| format!("Failed to kill process: {}", e))?;
+        }
+        
+        *process_guard = None;
+        println!("API server process terminated");
+    } else {
+        println!("No API server process to stop");
+    }
+    
     Ok(())
 }
 
@@ -77,6 +147,18 @@ fn redact_base64_image(image_data: String, config: String) -> Result<String, Str
     Ok(result)
 }
 
+// Function to check API server status
+#[tauri::command]
+fn check_api_status() -> Result<bool, String> {
+    match reqwest::blocking::Client::new()
+        .get("http://127.0.0.1:1426/health")
+        .timeout(Duration::from_secs(2))
+        .send() {
+            Ok(response) => Ok(response.status().is_success()),
+            Err(_) => Ok(false)
+        }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -84,7 +166,9 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             start_api_server,
-            redact_base64_image
+            stop_api_server,
+            redact_base64_image,
+            check_api_status
         ])
         .setup(|app| {
             // Start API server at app startup for better UX
@@ -101,7 +185,22 @@ fn main() {
         })
         .on_window_event(|_window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                println!("Window close requested");
+                // Avoid multiple close attempts
+                let mut is_closing = IS_CLOSING.lock().unwrap();
+                if *is_closing {
+                    return;
+                }
+                *is_closing = true;
+                
+                println!("Window close requested, stopping API server...");
+                
+                // Clean up API server before closing
+                if let Err(e) = stop_api_server() {
+                    eprintln!("Failed to stop API server: {}", e);
+                }
+                
+                // Don't call window.close() here, as it would trigger another close event
+                // Just let the window close naturally by returning
             }
         })
         .run(tauri::generate_context!())
