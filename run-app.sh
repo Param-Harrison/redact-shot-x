@@ -69,38 +69,40 @@ else
   fi
 fi
 
-echo -e "${YELLOW}📦 Activating virtual environment...${NC}"
-source venv/bin/activate
-echo -e "${GREEN}✔ Python in venv: $(python --version) ($(which python))${NC}"
-
 # ────────────────────────────────────────────────────────────────────────────────
-# Python backend
-if [ ! -d "src-python" ]; then
-  echo -e "${RED}❌ src-python directory missing.${NC}"
-  exit 1
-fi
-
-cd src-python
-
-if [ -f "pyproject.toml" ]; then
-  echo -e "${YELLOW}📦 Installing Python dependencies...${NC}"
-  pip install --upgrade pip setuptools wheel
-  pip install .
-  pip install watchfiles pyinstaller
-else
-  echo -e "${RED}❌ pyproject.toml not found.${NC}"
-  exit 1
-fi
-
-cd ..
-
-# ────────────────────────────────────────────────────────────────────────────────
-# Build sidecar for development
+# Build sidecar for development if requested
 if [ "${1}" == "--build-sidecar" ] || [ -n "${BUILD_SIDECAR}" ]; then
   echo -e "${YELLOW}🔧 Building Python sidecar for development...${NC}"
   
-  # Use our shell script to build the sidecar
-  ./scripts/build-sidecar.sh
+  # Run in a subshell to contain venv activation
+  (
+    echo -e "${YELLOW}📦 Activating virtual environment...${NC}"
+    source venv/bin/activate
+    echo -e "${GREEN}✔ Python in venv: $(python --version) ($(which python))${NC}"
+    
+    # Python backend
+    if [ ! -d "src-python" ]; then
+      echo -e "${RED}❌ src-python directory missing.${NC}"
+      exit 1
+    fi
+    
+    cd src-python
+    
+    if [ -f "pyproject.toml" ]; then
+      echo -e "${YELLOW}📦 Installing Python dependencies...${NC}"
+      pip install --upgrade pip setuptools wheel
+      pip install .
+      pip install watchfiles pyinstaller
+    else
+      echo -e "${RED}❌ pyproject.toml not found.${NC}"
+      exit 1
+    fi
+    
+    cd ..
+    
+    # Use our shell script to build the sidecar
+    ./scripts/build-sidecar.sh
+  )
   
   echo -e "${GREEN}✅ Sidecar build complete${NC}"
   
@@ -111,40 +113,70 @@ if [ "${1}" == "--build-sidecar" ] || [ -n "${BUILD_SIDECAR}" ]; then
 fi
 
 # ────────────────────────────────────────────────────────────────────────────────
-# Start FastAPI with watchfiles (auto-reload)
-echo -e "${YELLOW}⚙ Starting FastAPI backend with watchfiles...${NC}"
-cd src-python
-# Use --workers 1 to reduce concurrency issues during shutdown and redirect stderr
-watchfiles "uvicorn api:app --host 127.0.0.1 --port 1426 --workers 1" . 2>/dev/null &
-PYTHON_PID=$!
-
-# Wait until FastAPI is responsive
-echo -e "${YELLOW}⏳ Waiting for API to become responsive...${NC}"
-for i in {1..10}; do
-  if curl -s http://127.0.0.1:1426/ | grep -q '"status":'; then
-    echo -e "${GREEN}✅ API is up!${NC}"
-    break
-  fi
-  sleep 1
-done
-
-cd ..
-
-# ────────────────────────────────────────────────────────────────────────────────
-# Frontend
-if [ ! -d "node_modules" ]; then
-  echo -e "${YELLOW}📦 Installing Node.js dependencies...${NC}"
-  npm install
-fi
-
-# Determine whether to start Tauri or web mode
-if [ "${1}" == "--tauri" ]; then
-  echo -e "${GREEN}🚀 Starting app in Tauri mode...${NC}"
-  npm run tauri dev
-else
-  echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"
-  echo -e "${GREEN}Frontend running at → http://localhost:3000${NC}"
-  echo -e "${YELLOW}🛑 Press Ctrl+C to stop everything${NC}"
+# Run main app operations in a subshell to contain venv activation
+(
+  echo -e "${YELLOW}📦 Activating virtual environment...${NC}"
+  source venv/bin/activate
+  echo -e "${GREEN}✔ Python in venv: $(python --version) ($(which python))${NC}"
   
-  npx vite --config vite.web.config.ts
-fi
+  # Python backend
+  if [ ! -d "src-python" ]; then
+    echo -e "${RED}❌ src-python directory missing.${NC}"
+    exit 1
+  fi
+  
+  cd src-python
+  
+  if [ -f "pyproject.toml" ]; then
+    echo -e "${YELLOW}📦 Installing Python dependencies...${NC}"
+    pip install --upgrade pip setuptools wheel
+    pip install .
+    pip install watchfiles pyinstaller
+  else
+    echo -e "${RED}❌ pyproject.toml not found.${NC}"
+    exit 1
+  fi
+  
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Start FastAPI with watchfiles (auto-reload)
+  echo -e "${YELLOW}⚙ Starting FastAPI backend with watchfiles...${NC}"
+  # Use --workers 1 to reduce concurrency issues during shutdown and redirect stderr
+  watchfiles "uvicorn api:app --host 127.0.0.1 --port 1426 --workers 1" . 2>/dev/null &
+  PYTHON_PID=$!
+  
+  # Wait until FastAPI is responsive
+  echo -e "${YELLOW}⏳ Waiting for API to become responsive...${NC}"
+  for i in {1..10}; do
+    if curl -s http://127.0.0.1:1426/ | grep -q '"status":'; then
+      echo -e "${GREEN}✅ API is up!${NC}"
+      break
+    fi
+    sleep 1
+  done
+  
+  cd ..
+  
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Frontend
+  if [ ! -d "node_modules" ]; then
+    echo -e "${YELLOW}📦 Installing Node.js dependencies...${NC}"
+    npm install
+  fi
+  
+  # Determine whether to start Tauri or web mode
+  if [ "${1}" == "--tauri" ]; then
+    echo -e "${GREEN}🚀 Starting app in Tauri mode...${NC}"
+    npm run tauri dev
+  else
+    echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"
+    echo -e "${GREEN}Frontend running at → http://localhost:3000${NC}"
+    echo -e "${YELLOW}🛑 Press Ctrl+C to stop everything${NC}"
+    
+    npx vite --config vite.web.config.ts
+  fi
+  
+  # Virtual environment will be automatically deactivated when this subshell exits
+)
+
+# Make sure we exit cleanly even if the subshell exits
+cleanup
