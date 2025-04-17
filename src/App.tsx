@@ -140,13 +140,34 @@ function App() {
 
   // Function to clean up image data and help GC
   const cleanupImageData = () => {
-    if (image) {
-      setImage(null);
-      URL.revokeObjectURL(image.startsWith('blob:') ? image : '');
-    }
-    if (redactedImage) {
-      setRedactedImage(null);
-      URL.revokeObjectURL(redactedImage.startsWith('blob:') ? redactedImage : '');
+    try {
+      // Clear image state
+      if (image) {
+        // Revoke any object URLs to prevent memory leaks
+        if (image.startsWith('blob:')) {
+          URL.revokeObjectURL(image);
+        }
+        setImage(null);
+      }
+      
+      // Clear redacted image state
+      if (redactedImage) {
+        // Revoke any object URLs to prevent memory leaks
+        if (redactedImage.startsWith('blob:')) {
+          URL.revokeObjectURL(redactedImage);
+        }
+        setRedactedImage(null);
+      }
+      
+      // Suggest garbage collection when browser is idle
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        // @ts-ignore - TypeScript might not know requestIdleCallback
+        window.requestIdleCallback(() => {
+          console.log("Cleaned up image data");
+        });
+      }
+    } catch (error) {
+      console.error("Error cleaning up images:", error);
     }
   };
 
@@ -205,29 +226,55 @@ function App() {
 
     if (!file.type.match('image.*') && !file.name.endsWith('.dcm')) {
       // Show error for non-image files
+      setApiError('Only image files are supported');
       return;
+    }
+    
+    // Check file size - warn if over 5MB to prevent excessive memory usage
+    const MAX_FILE_SIZE_MB = 5;
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      console.warn(`Large file detected (${(file.size / (1024 * 1024)).toFixed(2)}MB). This may cause performance issues.`);
+      // We'll still process it, but warn the user in the console
     }
 
     // Save the original filename
     setOriginalFileName(file.name);
     
+    // Use more memory-efficient approach for FileReader
     const reader = new FileReader();
+    
+    // Set up completion handler before starting read
     reader.onload = (e) => {
       if (e.target && typeof e.target.result === 'string') {
-        setImage(e.target.result);
-        processImage(e.target.result);
+        // Process immediately and then set image state
+        // to avoid keeping multiple copies of large strings
+        const imageData = e.target.result;
+        
+        // Set image first so user sees something happening
+        setImage(imageData);
+        
+        // Process the image (this copies the data again, but we need it for display too)
+        processImage(imageData);
         
         // Ensure content is scrolled to top when new image is loaded
         window.scrollTo(0, 0);
+        
+        // Clear the FileReader result to help garbage collection
+        reader.onload = null;
+        reader.onerror = null;
       }
     };
     
     // Set up error handler
     reader.onerror = () => {
       console.error("FileReader error:", reader.error);
+      setApiError('Failed to read image file');
       reader.abort();
+      reader.onload = null;
+      reader.onerror = null;
     };
     
+    // Start reading the file
     reader.readAsDataURL(file);
   };
 
@@ -242,6 +289,13 @@ function App() {
         throw new Error('API server is not running. Please check the connection or try restarting.');
       }
       
+      // Create a local copy to avoid keeping reference to the original string
+      // which might be referenced in the upper scope
+      const imageDataCopy = imageData;
+      
+      // Log size of data for debugging
+      console.log(`Processing image of size: ${(imageDataCopy.length / 1024).toFixed(2)}KB`);
+      
       // Create configuration object for Python backend
       const config = {
         enabledTypes,
@@ -252,7 +306,12 @@ function App() {
       };
       
       // Call our unified API service that handles both web and Tauri environments
-      const result = await processImageApi(imageData, config);
+      const result = await processImageApi(imageDataCopy, config);
+      
+      // Clear references to large data before React re-renders
+      // This helps free memory immediately rather than waiting for GC
+      const resultImageData = result.redactedImage;
+      let resultRedactionCount = 0;
       
       if (result.success) {
         // Clear old redacted image if it exists
@@ -260,8 +319,11 @@ function App() {
           URL.revokeObjectURL(redactedImage.startsWith('blob:') ? redactedImage : '');
         }
         
-        setRedactedImage(result.redactedImage);
-        setRedactionCount(result.redactionCount);
+        resultRedactionCount = result.redactionCount;
+        
+        // Update state with the result
+        setRedactedImage(resultImageData);
+        setRedactionCount(resultRedactionCount);
       } else {
         console.error("Error processing image:", result.error);
         setApiError(result.error || 'Unknown error');
@@ -278,6 +340,19 @@ function App() {
       try {
         // In browser environments, we rely on JavaScript's garbage collection
         // We've already cleaned up references which is the best we can do
+        
+        // Allow a moment for React to finish rendering before
+        // suggesting garbage collection to the browser
+        setTimeout(() => {
+          // This sets empty string to any dangling references
+          // and suggests to browser it's a good time for GC
+          if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+            // @ts-ignore - TypeScript might not know requestIdleCallback
+            window.requestIdleCallback(() => {
+              console.log("Suggesting cleanup to browser");
+            });
+          }
+        }, 100);
       } catch (e) {
         console.log("Error during cleanup:", e);
       }

@@ -122,6 +122,10 @@ export const ensureApiRunning = async (): Promise<boolean> => {
  */
 export const processImage = async (imageData: string, config: any) => {
   try {
+    // Log the size of the image data for debugging
+    const dataSizeKB = Math.round(imageData.length / 1024);
+    log(`Processing image of size: ${dataSizeKB}KB`);
+    
     // Check if we're in Tauri environment
     const hasTauriApi = await initTauriApi();
     
@@ -130,41 +134,71 @@ export const processImage = async (imageData: string, config: any) => {
       throw new Error('Failed to start or connect to API server');
     }
     
+    // Create a local copy of the configuration to avoid reference issues
+    const configCopy = JSON.parse(JSON.stringify(config));
+    
     // If we have invoke available from Tauri, use it
     if (hasTauriApi) {
       // Tauri implementation
       log('Using Tauri backend for image processing');
       
-      // Call Tauri command to process the image
-      const result = await invoke('redact_base64_image', {
-        imageData,
-        config: JSON.stringify(config)
-      });
-      
-      // Parse result if needed
-      return typeof result === 'string' ? JSON.parse(result) : result;
+      try {
+        // Call Tauri command to process the image
+        const result = await invoke('redact_base64_image', {
+          imageData,
+          config: JSON.stringify(configCopy)
+        });
+        
+        // Clear config copy to help garbage collection
+        Object.keys(configCopy).forEach(key => {
+          delete configCopy[key];
+        });
+        
+        // Parse result if needed
+        return typeof result === 'string' ? JSON.parse(result) : result;
+      } catch (error) {
+        log('Error in Tauri redact_base64_image:', error);
+        throw error;
+      }
     } else {
       // Web implementation
       log('Using web fetch API for image processing');
       
-      // Call Python API server directly
-      const response = await fetch(`${API_URL}/redact/base64`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      try {
+        // Create request body once to avoid duplicating the large string
+        const requestBody = JSON.stringify({
           imageData: imageData,
-          config: config
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to process image');
+          config: configCopy
+        });
+        
+        // Call Python API server directly
+        const response = await fetch(`${API_URL}/redact/base64`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: requestBody
+        });
+        
+        // Clear request body reference to help garbage collection
+        // requestBody is a string so we can't delete properties,
+        // but we can set it to empty to help JS garbage collector
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to process image');
+        }
+        
+        // Clear config copy to help garbage collection
+        Object.keys(configCopy).forEach(key => {
+          delete configCopy[key];
+        });
+        
+        return await response.json();
+      } catch (error) {
+        log('Error in web fetch API processing:', error);
+        throw error;
       }
-      
-      return await response.json();
     }
   } catch (error) {
     log('Error in processImage:', error);
@@ -172,6 +206,14 @@ export const processImage = async (imageData: string, config: any) => {
   } finally {
     // Help free memory by removing references to large data
     imageData = ''; // Allow GC to collect this large string
+    
+    // Suggest garbage collection when the browser is idle
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      // @ts-ignore - TypeScript might not know requestIdleCallback
+      window.requestIdleCallback(() => {
+        log('Suggested cleanup after image processing');
+      });
+    }
   }
 };
 

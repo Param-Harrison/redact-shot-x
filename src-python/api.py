@@ -1,6 +1,7 @@
 # api.py
 import json
 import os
+import gc
 import argparse
 import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -85,16 +86,30 @@ async def redact_uploaded_image(
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+        # Force garbage collection to prevent memory buildup
+        gc.collect()
+
         return JSONResponse(content=json.loads(result))
     except Exception as e:
         logger.exception("Error processing upload")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up references for garbage collection
+        if "config" in locals():
+            del config
+        if "result" in locals():
+            del result
+        gc.collect()
 
 
 @app.post("/redact/base64")
 async def redact_base64_image(request: Base64Request):
     try:
-        logger.info("Received base64 image redaction request")
+        # Log image size to help with debugging
+        image_data_len = len(request.imageData) if request.imageData else 0
+        logger.info(
+            f"Received base64 image redaction request, size: {image_data_len / 1024:.2f}KB"
+        )
 
         # Log configuration details for debugging
         if request.config:
@@ -112,23 +127,55 @@ async def redact_base64_image(request: Base64Request):
 
         # Process the image with configuration
         result = redactor.redact_image_base64(request.imageData, request.config)
+
+        # Clear references to large data objects
+        request_data = request.imageData
+        request.imageData = ""  # Clear the reference to large string
+        del request_data  # Explicitly delete the reference
+
+        # Force garbage collection to prevent memory buildup
+        gc.collect()
+
         return JSONResponse(content=json.loads(result))
     except Exception as e:
         logger.exception("Error processing base64 image")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clean up references for garbage collection
+        if "request" in locals():
+            request.imageData = ""  # Clear large string
+        if "result" in locals():
+            del result
+        gc.collect()
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="RedactShotX API Server")
     parser.add_argument("--host", type=str, default="127.0.0.1")
     parser.add_argument("--port", type=int, default=1426)
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     return parser.parse_args()
 
 
 def main():
     args = parse_arguments()
+
+    # Set higher log level in debug mode
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+
     logger.info(f"🚀 Starting RedactShotX API at {args.host}:{args.port}")
-    uvicorn.run("api:app", host=args.host, port=args.port, reload=False)
+
+    # Configure Uvicorn with specific settings to control memory usage
+    uvicorn.run(
+        "api:app",
+        host=args.host,
+        port=args.port,
+        reload=False,
+        workers=1,  # Single worker to prevent multiple memory copies
+        limit_concurrency=10,  # Limit concurrent requests
+    )
 
 
 if __name__ == "__main__":

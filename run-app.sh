@@ -10,16 +10,61 @@ NC='\033[0m' # No Color
 
 cleanup() {
   echo -e "\n${YELLOW}🧹 Cleaning up background processes...${NC}"
+  
+  # First try graceful termination of known PID
   if [ -n "$PYTHON_PID" ]; then
     echo -e "${YELLOW}Stopping Python backend (PID: $PYTHON_PID)${NC}"
     # Send SIGTERM for graceful shutdown
     kill -TERM "$PYTHON_PID" 2>/dev/null || true
     # Give some time for graceful shutdown
     sleep 1
-    # Force kill if still running and suppress errors
-    kill -9 "$PYTHON_PID" 2>/dev/null || true
-    echo -e "${GREEN}✅ Python backend stopped${NC}"
   fi
+  
+  # Then check for any processes using port 1426
+  echo -e "${YELLOW}Checking for any processes still using port 1426...${NC}"
+  PIDS_USING_PORT=$(lsof -t -i:1426 2>/dev/null)
+  
+  if [ -n "$PIDS_USING_PORT" ]; then
+    echo -e "${YELLOW}Found processes still using port 1426: $PIDS_USING_PORT${NC}"
+    
+    # Try terminating them gracefully first
+    echo -e "${YELLOW}Attempting graceful termination...${NC}"
+    for pid in $PIDS_USING_PORT; do
+      kill -TERM "$pid" 2>/dev/null || true
+    done
+    
+    # Wait a moment
+    sleep 1
+    
+    # Check if they're still running and force kill if needed
+    PIDS_STILL_USING_PORT=$(lsof -t -i:1426 2>/dev/null)
+    if [ -n "$PIDS_STILL_USING_PORT" ]; then
+      echo -e "${YELLOW}Force killing processes: $PIDS_STILL_USING_PORT${NC}"
+      for pid in $PIDS_STILL_USING_PORT; do
+        kill -9 "$pid" 2>/dev/null || true
+      done
+    fi
+  fi
+  
+  # Check for any watchfiles or uvicorn processes that might be lingering
+  echo -e "${YELLOW}Checking for lingering watchfiles/uvicorn processes...${NC}"
+  WATCHFILES_PIDS=$(ps -ef | grep -E 'watchfiles|uvicorn api:app' | grep -v grep | awk '{print $2}')
+  
+  if [ -n "$WATCHFILES_PIDS" ]; then
+    echo -e "${YELLOW}Found lingering watchfiles/uvicorn processes: $WATCHFILES_PIDS${NC}"
+    for pid in $WATCHFILES_PIDS; do
+      echo -e "${YELLOW}Killing watchfiles/uvicorn process: $pid${NC}"
+      kill -9 "$pid" 2>/dev/null || true
+    done
+  fi
+  
+  # Final check to ensure port is released
+  if lsof -i:1426 &>/dev/null; then
+    echo -e "${RED}⚠ Port 1426 is still in use! Processes may need to be killed manually.${NC}"
+  else
+    echo -e "${GREEN}✅ All processes cleaned up, port 1426 is free${NC}"
+  fi
+  
   exit 0
 }
 
@@ -166,6 +211,31 @@ fi
   # Determine whether to start Tauri or web mode
   if [ "${1}" == "--tauri" ]; then
     echo -e "${GREEN}🚀 Starting app in Tauri mode...${NC}"
+    
+    # Before starting in Tauri mode, clean up any existing API processes
+    echo -e "${YELLOW}Cleaning up any existing API processes before starting Tauri...${NC}"
+    
+    # Check for any processes using port 1426
+    PIDS_USING_PORT=$(lsof -t -i:1426 2>/dev/null)
+    if [ -n "$PIDS_USING_PORT" ]; then
+      echo -e "${YELLOW}Found existing processes using port 1426: $PIDS_USING_PORT${NC}"
+      for pid in $PIDS_USING_PORT; do
+        echo -e "${YELLOW}Killing process: $pid${NC}"
+        kill -9 "$pid" 2>/dev/null || true
+      done
+    fi
+    
+    # Check for any watchfiles or uvicorn processes
+    WATCHFILES_PIDS=$(ps -ef | grep -E 'watchfiles|uvicorn api:app' | grep -v grep | awk '{print $2}')
+    if [ -n "$WATCHFILES_PIDS" ]; then
+      echo -e "${YELLOW}Found existing watchfiles/uvicorn processes: $WATCHFILES_PIDS${NC}"
+      for pid in $WATCHFILES_PIDS; do
+        echo -e "${YELLOW}Killing process: $pid${NC}"
+        kill -9 "$pid" 2>/dev/null || true
+      done
+    fi
+    
+    # Start Tauri
     npm run tauri dev
   else
     echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"

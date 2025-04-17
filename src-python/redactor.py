@@ -6,6 +6,7 @@ import re
 from io import BytesIO
 from PIL import Image, ImageFilter
 import os
+import gc
 
 from presidio_analyzer import (
     AnalyzerEngine,
@@ -504,85 +505,125 @@ class ImageRedactor:
         )
 
     def redact_image_base64(self, base64_data: str, config: dict = None) -> str:
-        logger.info("🧠 Redacting image from base64 input")
+        """
+        Redact PII from a base64 encoded image
 
-        # Process configuration if provided
-        allow_list = []
-        custom_regexes = []
+        Args:
+            base64_data: Base64 encoded image data
+            config: Optional configuration for redaction
 
-        if (
-            config
-            and config.get("enabledTypes", {}).get("ALLOW_LIST")
-            and config.get("allowListTags")
-        ):
-            allow_list = config["allowListTags"]
-            logger.info(f"Using allow list with {len(allow_list)} items")
-
-        if (
-            config
-            and config.get("enabledTypes", {}).get("CUSTOM_REGEX")
-            and config.get("customRegexes")
-        ):
-            custom_regexes = config["customRegexes"]
-
-        # Create custom recognizers from config
-        ad_hoc_recognizers = []
-        if config:
-            ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
-
-        # Process the image data
-        image_data = base64.b64decode(
-            base64_data.split(",")[1] if "," in base64_data else base64_data
-        )
-
-        # Extract MIME type from the base64 data
-        mime_type = "image/png"  # Default
-        if "," in base64_data and ":" in base64_data.split(",")[0]:
-            mime_type = base64_data.split(",")[0].split(":")[1].split(";")[0]
-
-        image = Image.open(BytesIO(image_data))
-        original_format = image.format  # Save the original format
-
-        # Map MIME type to PIL format
-        mime_to_format = {
-            "image/png": "PNG",
-            "image/jpeg": "JPEG",
-            "image/jpg": "JPEG",
-            "image/gif": "GIF",
-            "image/bmp": "BMP",
-            "image/webp": "WEBP",
-            "image/tiff": "TIFF",
-        }
-
-        # Determine format for saving
-        save_format = mime_to_format.get(mime_type, original_format or "PNG")
-
-        redacted_image, results = self._blur_redact(
-            image, ad_hoc_recognizers, allow_list, custom_regexes
-        )
-
-        buffered = BytesIO()
+        Returns:
+            JSON string with redacted image in base64 and metadata
+        """
         try:
-            redacted_image.save(buffered, format=save_format)
-        except Exception as e:
-            logger.warning(
-                f"Could not save in format {save_format}: {e}. Falling back to PNG."
-            )
-            save_format = "PNG"
-            redacted_image.save(buffered, format=save_format)
+            import base64
+            import io
+            import gc
 
-        redacted_base64 = base64.b64encode(buffered.getvalue()).decode()
+            # Log the size of the incoming data
+            data_size_kb = len(base64_data) / 1024
+            logger.info(f"Processing base64 image of size: {data_size_kb:.2f}KB")
 
-        logger.info(
-            f"✅ Redacted {len(results)} elements from base64 image: {', '.join(set(r.entity_type for r in results))}"
-        )
-        return json.dumps(
-            {
+            # Find the header and extract the data
+            if "," in base64_data:
+                header, encoded = base64_data.split(",", 1)
+            else:
+                header = "data:image/jpeg;base64"
+                encoded = base64_data
+
+            # Convert to bytes
+            image_bytes = base64.b64decode(encoded)
+
+            # Clear large string to help garbage collection
+            encoded = None
+
+            # Open image from bytes
+            image = Image.open(io.BytesIO(image_bytes))
+
+            # Clear bytes to help garbage collection
+            image_bytes = None
+            gc.collect()
+
+            # Handle RGBA to RGB conversion if needed (for JPEG output)
+            if image.mode == "RGBA":
+                # Create a white background
+                background = Image.new("RGB", image.size, (255, 255, 255))
+                # Paste the image using the alpha channel as mask
+                background.paste(image, mask=image.split()[3])
+                image = background
+
+            # Process image with redaction
+            redaction_method = "blur"
+            if config and "redactionMethod" in config:
+                redaction_method = config["redactionMethod"]
+
+            # Get custom recognizers from config
+            ad_hoc_recognizers = None
+            if config and "enabledTypes" in config:
+                ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
+
+            # Allow list processing
+            allow_list = None
+            if config and "allowListTags" in config:
+                allow_list = config["allowListTags"]
+
+            # Custom regex support
+            custom_regexes = None
+            if config and "customRegexes" in config:
+                # Only use if enabled in config
+                if config.get("enabledTypes", {}).get("CUSTOM_REGEX", False):
+                    custom_regexes = config["customRegexes"]
+
+            # Redact the image based on method
+            if redaction_method == "box":
+                redacted_img, redaction_results = self._box_redact(
+                    image, ad_hoc_recognizers, allow_list, custom_regexes
+                )
+            else:  # Default to blur method
+                redacted_img, redaction_results = self._blur_redact(
+                    image, ad_hoc_recognizers, allow_list, custom_regexes
+                )
+
+            # Count redactions applied
+            redaction_count = len(redaction_results)
+
+            # Save redacted image to bytes
+            output_buffer = io.BytesIO()
+            redacted_img.save(output_buffer, format="JPEG", quality=95)
+            redacted_base64 = base64.b64encode(output_buffer.getvalue()).decode("utf-8")
+
+            # Clear the original image and redacted image
+            image = None
+            redacted_img = None
+            output_buffer = None
+            gc.collect()
+
+            # Create JSON result with metadata
+            result = {
                 "success": True,
-                "redactedImage": f"data:{mime_type};base64,{redacted_base64}",
-                "redactionCount": len(results),
+                "redactedImage": f"data:image/jpeg;base64,{redacted_base64}",
+                "redactionCount": redaction_count,
             }
-        )
+
+            # Clear the base64 result
+            redacted_base64 = None
+            gc.collect()
+
+            return json.dumps(result)
+        except Exception as e:
+            logger.exception(f"Error redacting base64 image: {str(e)}")
+            return json.dumps({"success": False, "error": str(e)})
+        finally:
+            # Ensure all large objects are cleared
+            if "image" in locals() and image is not None:
+                image = None
+            if "redacted_img" in locals() and redacted_img is not None:
+                redacted_img = None
+            if "output_buffer" in locals() and output_buffer is not None:
+                output_buffer = None
+            if "redacted_base64" in locals() and redacted_base64 is not None:
+                redacted_base64 = None
+            gc.collect()
 
     def _blur_redact(
         self,
