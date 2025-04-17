@@ -287,6 +287,21 @@ fn stop_api_server() -> Result<(), String> {
                         }
                     }
                 }
+                
+                // Check one more time after a brief pause
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                let output = Command::new("lsof")
+                    .args(["-i", ":1426"])
+                    .output();
+                
+                if let Ok(output) = output {
+                    let output_str = String::from_utf8_lossy(&output.stdout);
+                    if !output_str.is_empty() {
+                        println!("WARNING: Some processes are still using port 1426 after cleanup attempt");
+                    } else {
+                        println!("All processes using port 1426 have been terminated");
+                    }
+                }
             } else {
                 println!("No processes found using port 1426");
             }
@@ -299,6 +314,17 @@ fn stop_api_server() -> Result<(), String> {
         .timeout(Duration::from_secs(1))
         .send() {
             Ok(_) => {
+                // Last effort to kill anything using the port
+                println!("API server is still responding after shutdown attempt, forcing termination");
+                
+                #[cfg(not(target_os = "windows"))]
+                {
+                    use std::process::Command;
+                    let _ = Command::new("sh")
+                        .args(["-c", "lsof -ti:1426 | xargs kill -9"])
+                        .output();
+                }
+                
                 return Err("API server is still responding after shutdown attempt".to_string());
             },
             Err(_) => {
@@ -437,7 +463,10 @@ fn main() {
             std::thread::spawn(move || {
                 // First clean up any existing processes
                 println!("Cleaning up any existing API processes before starting...");
-                let _ = find_and_kill_api_processes();
+                match find_and_kill_api_processes() {
+                    Ok(_) => {},
+                    Err(e) => eprintln!("Error cleaning up existing processes: {}", e)
+                }
                 
                 // Use a blocking runtime for the async start operation
                 let rt = tokio::runtime::Builder::new_current_thread()
@@ -492,7 +521,10 @@ fn main() {
                     }
                     
                     // Force kill any remaining processes one last time
-                    let _ = find_and_kill_api_processes();
+                    match find_and_kill_api_processes() {
+                        Ok(_) => {},
+                        Err(e) => eprintln!("Error in final cleanup: {}", e)
+                    }
                     println!("All cleanup completed, exiting application");
                 });
                 

@@ -48,7 +48,7 @@ cleanup() {
   
   # Check for any watchfiles or uvicorn processes that might be lingering
   echo -e "${YELLOW}Checking for lingering watchfiles/uvicorn processes...${NC}"
-  WATCHFILES_PIDS=$(ps -ef | grep -E 'watchfiles|uvicorn api:app' | grep -v grep | awk '{print $2}')
+  WATCHFILES_PIDS=$(ps -ef | grep -E 'watchfiles|uvicorn api:app|api.py|redactshotx' | grep -v grep | awk '{print $2}')
   
   if [ -n "$WATCHFILES_PIDS" ]; then
     echo -e "${YELLOW}Found lingering watchfiles/uvicorn processes: $WATCHFILES_PIDS${NC}"
@@ -58,9 +58,42 @@ cleanup() {
     done
   fi
   
+  # Search for any processes with "api" in the name/command (for our sidecar)
+  echo -e "${YELLOW}Checking for any remaining API processes...${NC}"
+  API_PIDS=$(ps -ef | grep -v grep | grep -i "api" | grep -v $$ | awk '{print $2}')
+  if [ -n "$API_PIDS" ]; then
+    echo -e "${YELLOW}Found potential API processes: $API_PIDS${NC}"
+    for pid in $API_PIDS; do
+      # Get the command name to be more precise
+      CMD=$(ps -p $pid -o comm= 2>/dev/null || echo "")
+      if [[ "$CMD" == *"api"* || "$CMD" == *"python"* || "$CMD" == *"uvicorn"* ]]; then
+        echo -e "${YELLOW}Killing API process: $pid ($CMD)${NC}"
+        kill -9 $pid 2>/dev/null || true
+      fi
+    done
+  fi
+  
   # Final check to ensure port is released
   if lsof -i:1426 &>/dev/null; then
-    echo -e "${RED}⚠ Port 1426 is still in use! Processes may need to be killed manually.${NC}"
+    echo -e "${RED}⚠ Port 1426 is still in use! Last attempt to force kill...${NC}"
+    # One last brute force attempt
+    FINAL_PIDS=$(lsof -t -i:1426 2>/dev/null)
+    if [ -n "$FINAL_PIDS" ]; then
+      for pid in $FINAL_PIDS; do
+        echo -e "${RED}Force killing PID $pid${NC}"
+        kill -9 $pid 2>/dev/null || true
+      done
+      
+      # Give it a moment
+      sleep 1
+      
+      # Check one more time
+      if lsof -i:1426 &>/dev/null; then
+        echo -e "${RED}⚠ Failed to free port 1426. Processes may need to be killed manually.${NC}"
+      else
+        echo -e "${GREEN}✅ All processes cleaned up, port 1426 is free${NC}"
+      fi
+    fi
   else
     echo -e "${GREEN}✅ All processes cleaned up, port 1426 is free${NC}"
   fi
