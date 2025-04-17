@@ -64,11 +64,11 @@ html, body {
 .app-container {
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-height: 100vh;
-  max-width: 720px;
   width: 100%;
+  max-width: 100%;
   margin: 0 auto;
-  background-color: white;
   position: relative;
   padding: 0 clamp(0.5rem, 3vw, 1.5rem);
   padding-top: env(safe-area-inset-top, 0);
