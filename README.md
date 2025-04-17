@@ -65,7 +65,7 @@ These scripts start both the backend API server and frontend in one step:
    ```bash
    cd src-python
    pip install -e .
-   uvicorn api:app --host 127.0.0.1 --port 8000
+   uvicorn api:app --host 127.0.0.1 --port 1426
    ```
 
 2. In a separate terminal, start the React frontend:

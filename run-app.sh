@@ -12,7 +12,13 @@ cleanup() {
   echo -e "\n${YELLOW}🧹 Cleaning up background processes...${NC}"
   if [ -n "$PYTHON_PID" ]; then
     echo -e "${YELLOW}Stopping Python backend (PID: $PYTHON_PID)${NC}"
-    kill "$PYTHON_PID" 2>/dev/null || true
+    # Send SIGTERM for graceful shutdown
+    kill -TERM "$PYTHON_PID" 2>/dev/null || true
+    # Give some time for graceful shutdown
+    sleep 1
+    # Force kill if still running and suppress errors
+    kill -9 "$PYTHON_PID" 2>/dev/null || true
+    echo -e "${GREEN}✅ Python backend stopped${NC}"
   fi
   exit 0
 }
@@ -108,13 +114,14 @@ fi
 # Start FastAPI with watchfiles (auto-reload)
 echo -e "${YELLOW}⚙ Starting FastAPI backend with watchfiles...${NC}"
 cd src-python
-watchfiles "uvicorn api:app --host 127.0.0.1 --port 8000" . &
+# Use --workers 1 to reduce concurrency issues during shutdown and redirect stderr
+watchfiles "uvicorn api:app --host 127.0.0.1 --port 1426 --workers 1" . 2>/dev/null &
 PYTHON_PID=$!
 
 # Wait until FastAPI is responsive
 echo -e "${YELLOW}⏳ Waiting for API to become responsive...${NC}"
 for i in {1..10}; do
-  if curl -s http://127.0.0.1:8000/ | grep -q '"status":'; then
+  if curl -s http://127.0.0.1:1426/ | grep -q '"status":'; then
     echo -e "${GREEN}✅ API is up!${NC}"
     break
   fi

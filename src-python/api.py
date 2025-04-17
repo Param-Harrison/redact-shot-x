@@ -113,7 +113,7 @@ async def redact_base64_image(request: Base64Request):
 def parse_arguments():
     parser = argparse.ArgumentParser(description="RedactShotX API Server")
     parser.add_argument("--host", type=str, default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--port", type=int, default=1426)
     return parser.parse_args()
 
 

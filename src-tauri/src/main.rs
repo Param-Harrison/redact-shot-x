@@ -62,7 +62,7 @@ fn start_api_server() -> Result<(), String> {
 
     // Start the process
     let child = Command::new(binary_path)
-        .args(["--host", "127.0.0.1", "--port", "8000"])
+        .args(["--host", "127.0.0.1", "--port", "1426"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -86,7 +86,7 @@ fn redact_base64_image(image_data: String, config: String) -> Result<String, Str
     // Submit the redaction request to the API server
     let client = reqwest::blocking::Client::new();
     let response = client
-        .post("http://127.0.0.1:8000/redact/base64")
+        .post("http://127.0.0.1:1426/redact/base64")
         .header("Content-Type", "application/json")
         .body(format!(
             "{{\"imageData\": \"{}\", \"config\": {}}}",
