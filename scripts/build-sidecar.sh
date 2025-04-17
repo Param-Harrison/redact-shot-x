@@ -56,28 +56,17 @@ else
 fi
 
 # Build based on platform
-case "$PLATFORM" in
-  "windows")
-    echo -e "${GREEN}Building for Windows...${NC}"
-    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
-    ;;
-  "mac-intel")
-    echo -e "${GREEN}Building for macOS (Intel)...${NC}"
-    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
-    ;;
-  "mac-apple")
-    echo -e "${GREEN}Building for macOS (Apple Silicon)...${NC}"
-    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
-    ;;
-  "linux")
-    echo -e "${GREEN}Building for Linux...${NC}"
-    pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
-    ;;
-  *)
-    echo -e "${RED}Unsupported platform: $PLATFORM${NC}"
-    echo -e "${RED}Please specify: windows, mac-intel, mac-apple, or linux${NC}"
-    exit 1
-    ;;
-esac
+echo -e "${GREEN}Building for $PLATFORM...${NC}"
+pyinstaller -c -F --clean --name api --collect-all spacy --collect-all presidio_analyzer --collect-all presidio_image_redactor --distpath src-tauri/bin src-python/api.py
+
+# For Windows, rename the .exe file to match what Tauri expects
+if [ "$PLATFORM" = "windows" ]; then
+  # Rename api.exe to api so Tauri finds it
+  mv src-tauri/bin/api.exe src-tauri/bin/api
+  echo -e "${YELLOW}Renamed api.exe to api for Tauri compatibility${NC}"
+else
+  # For non-Windows platforms, ensure it's executable
+  chmod +x src-tauri/bin/api
+fi
 
 echo -e "${GREEN}✅ Sidecar build complete for $PLATFORM!${NC}" 

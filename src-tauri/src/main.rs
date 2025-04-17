@@ -63,11 +63,13 @@ async fn start_api_server(app: tauri::AppHandle) -> Result<(), String> {
     println!("Starting API server...");
     
     // Get the sidecar command
+    println!("Looking for sidecar binary 'api'...");
     let sidecar = app
         .shell()
         .sidecar("api")
         .map_err(|e| format!("Could not find sidecar: {}", e))?;
 
+    println!("Found sidecar binary, spawning process...");
     let (mut rx, child) = sidecar
         .spawn()
         .map_err(|e| format!("Failed to spawn API sidecar: {}", e))?;
@@ -464,7 +466,7 @@ fn main() {
                 println!("Window close requested, stopping API server...");
                 
                 // Create a hard copy of needed state to avoid async issues
-                let app = window.app_handle();
+                let _app = window.app_handle();
                 
                 // Create a separate thread for cleanup to avoid blocking async context
                 std::thread::spawn(move || {

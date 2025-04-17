@@ -16,6 +16,8 @@
     "build:sidecar-linux": "bash scripts/build-sidecar.sh linux",
     "build:sidecar": "bash scripts/build-sidecar.sh",
     "build:sidecar-all": "npm run build:sidecar-windows && npm run build:sidecar-mac && npm run build:sidecar-mac-intel && npm run build:sidecar-linux",
+    "check:sidecar": "bash scripts/check-sidecar.sh",
+    "tauri:dev": "npm run build:sidecar && npm run tauri dev",
     "tauri:build": "npm run build:sidecar-all && npm run tauri build"
   },
   "dependencies": {
