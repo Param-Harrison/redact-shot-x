@@ -371,28 +371,39 @@ html, body {
 }
 
 .drop-icon {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background-color: rgba(60, 185, 137, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(70px, 9vw, 90px); /* Slightly larger but more consistent size */
-  height: clamp(70px, 9vw, 90px);
-  margin-bottom: 1.75rem;
-  border-radius: 50%;
-  background-color: rgba(16, 185, 129, 0.08); /* Lighter, more elegant background */
-  color: var(--primary-color);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12); /* Soft shadow for depth */
-  transition: all 0.3s ease;
-  border: 1px solid rgba(16, 185, 129, 0.15); /* Subtle border */
-  position: relative; /* For the inner ring effect */
+  margin-bottom: 1.5rem;
+  position: relative;
+  transition: all 0.2s ease;
 }
 
-/* Make the SVG icon more refined */
 .drop-icon svg {
-  width: 38px;
-  height: 38px;
-  stroke: currentColor;
-  stroke-width: 1.5; /* Thinner lines for more elegance */
-  filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.2)); /* Subtle glow effect */
+  width: 50%;
+  height: 50%;
+  stroke: #3cb989;
+  stroke-width: 2;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .drop-icon {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .drop-icon {
+    width: 60px;
+    height: 60px;
+  }
 }
 
 /* Add hover effect for better interactivity */
