@@ -6,9 +6,7 @@
 export const isTauri = window.navigator.userAgent.includes('Tauri');
 
 // API configuration
-export const API_URL = isTauri 
-  ? 'http://localhost:1426' // Default API URL for web environment
-  : 'http://localhost:1426'; // Same URL for both during development (will be called differently)
+export const API_URL = 'http://0.0.0.0:8004'; // Use consistent localhost IP instead of domain name
 
 // Feature flags
 export const FEATURES = {

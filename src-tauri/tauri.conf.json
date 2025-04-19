@@ -42,6 +42,11 @@
     "category": "DeveloperTool",
     "shortDescription": "",
     "longDescription": "",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
     "macOS": {
       "entitlements": null,
       "exceptionDomain": "",
@@ -49,15 +54,10 @@
       "providerShortName": null,
       "signingIdentity": "-"
     },
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
-    }
-  },
-  "plugins": {
-    "shell": {
-      "open": true
+    "linux": {
+      "deb": {
+        "depends": []
+      }
     }
   }
 }

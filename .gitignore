@@ -51,3 +51,6 @@ src-python/build/
 
 # venv
 venv/
+
+# Tauri
+tauri-vite-python-template-master/

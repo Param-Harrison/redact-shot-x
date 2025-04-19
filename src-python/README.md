@@ -49,7 +49,7 @@ python redactor.py --image <path_to_base64_file> --config <json_config> --base64
 ### API Server Usage
 
 ```
-python api.py --host 127.0.0.1 --port 1426
+python api.py --host 0.0.0.0 --port 8004
 ```
 
 The API server exposes the following endpoints:

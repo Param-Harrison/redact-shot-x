@@ -6,7 +6,7 @@ import DropZone from "./components/DropZone";
 import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
 import SettingsModal, { EnabledTypesRecord as SettingsEnabledTypesRecord } from "./components/SettingsModal";
-import { processImage as processImageApi, cleanupApiServer, checkApiStatus, ensureApiRunning } from "./services/api";
+import { processImage as processImageApi, cleanupApiServer, checkApiStatus } from "./services/api";
 import { API_URL } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
@@ -100,15 +100,8 @@ function App() {
           setApiStatus('running');
           setApiError(null);
         } else {
-          // If not running, try to start it (in Tauri mode)
-          const started = await ensureApiRunning();
-          if (started) {
-            setApiStatus('running');
-            setApiError(null);
-          } else {
-            setApiStatus('error');
-            setApiError('Could not connect to the API server');
-          }
+          setApiStatus('error');
+          setApiError('Could not connect to the API server');
         }
       } catch (error) {
         setApiStatus('error');
@@ -175,13 +168,15 @@ function App() {
   const handleApiRetry = async () => {
     setApiStatus('unknown');
     setApiError('Attempting to reconnect to API...');
-    const started = await ensureApiRunning();
-    if (started) {
+    
+    // Just check if the API is running - we no longer try to start it
+    const isRunning = await checkApiStatus();
+    if (isRunning) {
       setApiStatus('running');
       setApiError(null);
     } else {
       setApiStatus('error');
-      setApiError('Failed to start or connect to the API server.');
+      setApiError('Failed to connect to the API server. Make sure it is running.');
     }
   };
 

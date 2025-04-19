@@ -33,7 +33,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='api',
+    name='api-x86_64-unknown-linux-gnu',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
