@@ -47,22 +47,3 @@ export const processImage = async (imageData: string, config: any) => {
     throw error;
   }
 };
-
-/**
- * Clean up and stop API server when app is closing
- */
-export const cleanupApiServer = async () => {
-  try {
-    await pythonApi.shutdown();
-    log('API server shutdown initiated');
-  } catch (error) {
-    log('Error stopping API server:', error);
-  }
-};
-
-// Register window close event listener to clean up
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', async () => {
-    await cleanupApiServer();
-  });
-} 

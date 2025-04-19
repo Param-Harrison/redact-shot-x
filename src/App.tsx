@@ -6,7 +6,7 @@ import DropZone from "./components/DropZone";
 import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
 import SettingsModal, { EnabledTypesRecord as SettingsEnabledTypesRecord } from "./components/SettingsModal";
-import { processImage as processImageApi, cleanupApiServer, checkApiStatus } from "./services/api";
+import { processImage as processImageApi, checkApiStatus } from "./services/api";
 import { API_URL } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
@@ -123,9 +123,6 @@ function App() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Cleanup function to ensure API server is stopped
-      cleanupApiServer();
-      
       // Clear any large data from memory
       cleanupImageData();
     };

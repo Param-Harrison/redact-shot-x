@@ -204,7 +204,6 @@ fi
     echo -e "${GREEN}Frontend running at → http://localhost:1420${NC}"
     echo -e "${GREEN}API running at → http://localhost:8004${NC}"
     echo -e "${YELLOW}🛑 Press Ctrl+C to stop everything${NC}"
-    
     npx vite --config vite.web.config.ts
   fi
   
