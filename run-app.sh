@@ -151,6 +151,10 @@ fi
     pip install --upgrade pip setuptools wheel
     pip install .
     pip install uvicorn fastapi
+
+    # Install spaCy model
+    echo -e "${YELLOW}📦 Installing spaCy language model...${NC}"
+    python -m spacy download en_core_web_sm
   else
     echo -e "${RED}❌ pyproject.toml not found.${NC}"
     exit 1

@@ -3,6 +3,7 @@ import json
 import os
 import gc
 import logging
+import sys
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -27,6 +28,44 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
 
+
+# PyInstaller bundling support for spaCy
+def _setup_spacy_paths():
+    """
+    Setup spaCy model paths when running as a PyInstaller bundle
+    """
+    try:
+        # If running from PyInstaller bundle
+        if getattr(sys, "frozen", False):
+            base_dir = os.path.dirname(
+                sys.executable if getattr(sys, "frozen", False) else __file__
+            )
+
+            # Set environment variables for spaCy to find models
+            os.environ["SPACY_DATA_PATH"] = os.path.join(base_dir, "spacy")
+
+            # Log configuration for debugging
+            logger.info(
+                f"Running as PyInstaller bundle, set SPACY_DATA_PATH to: {os.environ['SPACY_DATA_PATH']}"
+            )
+
+            # Make sure to adjust import paths if needed
+            spacy_dir = os.path.join(base_dir, "spacy")
+            sm_model_dir = os.path.join(spacy_dir, "en_core_web_sm")
+            if os.path.exists(sm_model_dir):
+                logger.info(f"spaCy model exists at: {sm_model_dir}")
+            else:
+                logger.warning(f"spaCy model directory not found at: {sm_model_dir}")
+                # List contents of spacy directory for debugging
+                if os.path.exists(spacy_dir):
+                    logger.info(f"Contents of spacy directory: {os.listdir(spacy_dir)}")
+    except Exception as e:
+        logger.error(f"Error setting up spaCy paths: {str(e)}")
+
+
+# Initialize spaCy paths
+_setup_spacy_paths()
+
 # Redactor instance cache
 _redactor_instance = None
 
@@ -39,7 +78,14 @@ def get_redactor():
     global _redactor_instance
     if _redactor_instance is None:
         logger.info("Initializing ImageRedactor instance")
-        _redactor_instance = ImageRedactor()
+        try:
+            _redactor_instance = ImageRedactor()
+            logger.info("ImageRedactor initialization successful")
+        except Exception as e:
+            logger.error(f"Failed to initialize ImageRedactor: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to initialize redactor: {str(e)}"
+            )
     return _redactor_instance
 
 
@@ -188,5 +234,7 @@ async def redact_base64_image(
 
 if __name__ == "__main__":
     logger.info(f"🚀 Starting RedactShotX API at {HOST_API}:{PORT_API}")
+    # Initialize redactor at startup to avoid first request delay
+    get_redactor()
     # Make sure we're accessible from the browser by enabling CORS
     uvicorn.run(app, host=HOST_API, port=PORT_API)
