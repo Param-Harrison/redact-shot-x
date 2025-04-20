@@ -154,12 +154,12 @@ fi
 
     # Install and copy spaCy model
     echo -e "${YELLOW}📦 Installing spaCy language model...${NC}"
-    python -m spacy download en_core_web_sm
+    python -m spacy download en_core_web_trf
 
-    echo -e "${YELLOW}📦 Copying en_core_web_sm into src-python/spacy for packaging...${NC}"
+    echo -e "${YELLOW}📦 Copying en_core_web_trf into src-python/spacy for packaging...${NC}"
     mkdir -p spacy
-    SPACY_MODEL_PATH=$(python -c "import en_core_web_sm; print(en_core_web_sm.__path__[0])")
-    cp -R "$SPACY_MODEL_PATH" spacy/en_core_web_sm
+    SPACY_MODEL_PATH=$(python -c "import en_core_web_trf; print(en_core_web_trf.__path__[0])")
+    cp -R "$SPACY_MODEL_PATH" spacy/en_core_web_trf
   else
     echo -e "${RED}❌ pyproject.toml not found.${NC}"
     exit 1

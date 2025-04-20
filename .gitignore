@@ -53,7 +53,9 @@ src-python/build/
 venv/
 
 # spaCy model content (keep folder, ignore contents)
+src-python/spacy/en_core_web_trf/**
 src-python/spacy/en_core_web_sm/**
 
 # But keep the folder
+!src-python/spacy/en_core_web_trf/.keep
 !src-python/spacy/en_core_web_sm/.keep
