@@ -7,7 +7,6 @@ import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
 import SettingsModal, { EnabledTypesRecord as SettingsEnabledTypesRecord } from "./components/SettingsModal";
 import { processImage as processImageApi, checkApiStatus } from "./services/api";
-import { API_URL } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
 // This is adjusted to match SettingsModal's EnabledTypesRecord type
@@ -300,25 +299,35 @@ function App() {
       // Call our unified API service that handles both web and Tauri environments
       const result = await processImageApi(imageDataCopy, config);
       
+      // Cast result to the expected type
+      interface ProcessingResult {
+        success: boolean;
+        redactedImage: string;
+        redactionCount: number;
+        error?: string;
+      }
+      
+      const typedResult = result as ProcessingResult;
+      
       // Clear references to large data before React re-renders
       // This helps free memory immediately rather than waiting for GC
-      const resultImageData = result.redactedImage;
+      const resultImageData = typedResult.redactedImage;
       let resultRedactionCount = 0;
       
-      if (result.success) {
+      if (typedResult.success) {
         // Clear old redacted image if it exists
         if (redactedImage) {
           URL.revokeObjectURL(redactedImage.startsWith('blob:') ? redactedImage : '');
         }
         
-        resultRedactionCount = result.redactionCount;
+        resultRedactionCount = typedResult.redactionCount;
         
         // Update state with the result
         setRedactedImage(resultImageData);
         setRedactionCount(resultRedactionCount);
       } else {
-        console.error("Error processing image:", result.error);
-        setApiError(result.error || 'Unknown error');
+        console.error("Error processing image:", typedResult.error);
+        setApiError(typedResult.error || 'Unknown error');
       }
     } catch (error) {
       console.error("Error processing image:", error);
@@ -564,28 +573,32 @@ function App() {
             style={{ display: 'none' }} 
           />
           {apiStatus === 'error' && (
-            <div className="api-error-banner">
-              <p>Error: {apiError || 'Cannot connect to API server'}</p>
-              <p>The API server at {API_URL} is not responding.</p>
-              <button onClick={handleApiRetry} className="retry-button">
-                Retry Connection
-              </button>
+            <div className="api-error-container">
+              <div className="api-error">
+                <h3>API Connection Error</h3>
+                <p>The API server is not responding.</p>
+                <p>Please make sure the application has proper permissions to run.</p>
+                <button onClick={handleApiRetry} className="retry-button">
+                  Retry Connection
+                </button>
+              </div>
             </div>
           )}
         </>
       ) : (
         <div className="content-area" ref={contentRef}>
           {apiError && (
-            <div className="api-error-message">
-              <p>Error: {apiError}</p>
-              <p>Make sure the Python API server is running at {API_URL}</p>
-              {apiStatus === 'error' && (
+            <div className="api-error-container">
+              <div className="api-error">
+                <h3>API Connection Error</h3>
+                <p>The API server is not responding.</p>
+                <p>Please make sure the application has proper permissions to run.</p>
                 <button onClick={handleApiRetry} className="retry-button">
                   Retry Connection
                 </button>
-              )}
+              </div>
             </div>
-          )}
+            )}
           
           <ImagePreview
             image={image}

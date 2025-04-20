@@ -34,9 +34,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "bin/api"
-    ],
+    "externalBin": [],
     "resources": [],
     "copyright": "",
     "category": "DeveloperTool",

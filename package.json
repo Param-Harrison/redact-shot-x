@@ -10,14 +10,8 @@
     "tauri": "tauri",
     "web": "vite --config vite.web.config.ts",
     "build:web": "tsc && vite build --config vite.web.config.ts",
-    "build:sidecar-windows": "bash scripts/build-sidecar.sh windows",
-    "build:sidecar-mac": "bash scripts/build-sidecar.sh mac-apple",
-    "build:sidecar-mac-intel": "bash scripts/build-sidecar.sh mac-intel",
-    "build:sidecar-linux": "bash scripts/build-sidecar.sh linux",
-    "build:sidecar": "bash scripts/build-sidecar.sh",
-    "build:sidecar-all": "pnpm build:sidecar-windows && pnpm build:sidecar-mac && pnpm build:sidecar-mac-intel && pnpm build:sidecar-linux",
-    "tauri:dev": "pnpm build:sidecar-mac && pnpm tauri dev",
-    "tauri:build": "pnpm build:sidecar-all && pnpm tauri build"
+    "tauri:dev": "pnpm tauri dev",
+    "tauri:build": "pnpm tauri build"
   },
   "dependencies": {
     "react": "^18.3.1",

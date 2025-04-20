@@ -1,32 +1,50 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod redactor;
+
+use redactor::{ImageRedactor, RedactionConfig, RedactionResponse};
+use serde::{Deserialize, Serialize};
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-async fn start_sidecar(app: tauri::AppHandle) -> Result<String, String> {
-    let sidecar = app
-        .shell()
-        .sidecar("api")
-        .map_err(|e| format!("Could not find sidecar: {}", e))?;
-
-    // Our Python API now listens on 0.0.0.0:8004 by default, so no need to specify port
-    let (_rx, _child) = sidecar
-        .spawn()
-        .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
-
-    // Wait a moment for the sidecar to start up
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
-    Ok("Sidecar started successfully".to_string())
+#[derive(Debug, Serialize, Deserialize)]
+struct Base64Request {
+    image_data: String,
+    config: Option<RedactionConfig>,
 }
 
 #[tauri::command]
-async fn run_sidecar(app: tauri::AppHandle) -> Result<String, String> {
-    start_sidecar(app).await
+async fn health_check() -> Result<serde_json::Value, String> {
+    Ok(serde_json::json!({
+        "status": "ok",
+        "message": "API is healthy"
+    }))
 }
 
-use tauri_plugin_shell::ShellExt;
+#[tauri::command]
+async fn redact_base64_image(request: Base64Request) -> Result<RedactionResponse, String> {
+    let redactor = ImageRedactor::new();
+    redactor.redact_image_base64(&request.image_data, request.config)
+}
+
+#[tauri::command]
+async fn redact_image_file(
+    file_path: String,
+    config_json: Option<String>,
+) -> Result<RedactionResponse, String> {
+    let config: Option<RedactionConfig> = match config_json {
+        Some(json) => match serde_json::from_str(&json) {
+            Ok(config) => Some(config),
+            Err(e) => return Err(format!("Failed to parse config JSON: {}", e)),
+        },
+        None => None,
+    };
+
+    let redactor = ImageRedactor::new();
+    redactor.redact_image(&file_path, config)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -34,17 +52,12 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_http::init())
-        .setup(|app| {
-            let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                match start_sidecar(app_handle).await {
-                    Ok(msg) => println!("{}", msg),
-                    Err(e) => eprintln!("Failed to start Python sidecar: {}", e),
-                }
-            });
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![greet, run_sidecar])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            health_check,
+            redact_base64_image,
+            redact_image_file
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
