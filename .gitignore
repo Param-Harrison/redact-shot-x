@@ -52,5 +52,8 @@ src-python/build/
 # venv
 venv/
 
-# Tauri
-tauri-vite-python-template-master/
+# spaCy model content (keep folder, ignore contents)
+src-python/spacy/en_core_web_sm/**
+
+# But keep the folder
+!src-python/spacy/en_core_web_sm/.keep

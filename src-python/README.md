@@ -17,7 +17,7 @@ This directory contains the Python backend for RedactShotX, which handles OCR an
    ```
 3. Install SpaCy language model:
    ```
-   python -m spacy download en_core_web_trf
+   python -m spacy download en_core_web_sm
    ```
 4. Install Tesseract OCR:
 
@@ -156,7 +156,7 @@ The redaction engine accepts a JSON configuration with the following options:
 - presidio-analyzer
 - presidio-image-redactor
 - pytesseract (requires Tesseract OCR to be installed)
-- spaCy with en_core_web_trf model for enhanced NLP capabilities
+- spaCy with en_core_web_sm model for enhanced NLP capabilities
 - Pillow for image processing
 
 ## Compatibility Notes
