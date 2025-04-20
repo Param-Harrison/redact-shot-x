@@ -32,19 +32,21 @@ pub struct RedactionResult {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RedactionConfig {
+    #[serde(rename = "redactionMethod")]
     pub redaction_method: Option<String>,
-    #[serde(default)]
+    #[serde(default, rename = "enabledTypes")]
     pub enabled_types: std::collections::HashMap<String, bool>,
-    #[serde(default)]
+    #[serde(default, rename = "customRegexes")]
     pub custom_regexes: Vec<String>,
-    #[serde(default)]
+    #[serde(default, rename = "denyListTags")]
     pub deny_list_tags: Vec<String>,
-    #[serde(default)]
+    #[serde(default, rename = "allowListTags")]
     pub allow_list_tags: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Base64Request {
+    #[serde(rename = "image_data", alias = "imageData")]
     pub image_data: String,
     pub config: Option<RedactionConfig>,
 }
@@ -52,9 +54,12 @@ pub struct Base64Request {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RedactionResponse {
     pub success: bool,
+    #[serde(rename = "redactedImage")]
     pub redacted_image: Option<String>,
     pub error: Option<String>,
+    #[serde(rename = "outputPath")]
     pub output_path: Option<String>,
+    #[serde(rename = "redactionCount")]
     pub redaction_count: usize,
 }
 
@@ -154,33 +159,62 @@ impl ImageRedactor {
         // 2. Check text against PII patterns
         // 3. Return regions to redact
 
-        // For this simplified version, we'll return a dummy region
-        // that's approximately 1/4 of the image in the center
         let (width, height) = image.dimensions();
-
         let mut results = Vec::new();
 
-        // Add a dummy redaction in the center of the image
+        // Create multiple simulated redaction regions to better mimic the Python implementation
+
+        // Add a center region (simulates a large piece of text)
         results.push(RedactionResult {
             left: width / 4,
             top: height / 4,
             width: width / 2,
-            height: height / 2,
-            entity_type: "DEMO".to_string(),
+            height: height / 8,
+            entity_type: "DEMO_TEXT".to_string(),
         });
 
-        // If we have a config with custom regexes, we should "detect" those too
+        // Add a top-right corner region (simulates a header or metadata)
+        results.push(RedactionResult {
+            left: width * 3 / 4,
+            top: height / 8,
+            width: width / 6,
+            height: height / 10,
+            entity_type: "DEMO_HEADER".to_string(),
+        });
+
+        // Add a bottom-left region (simulates footer text)
+        results.push(RedactionResult {
+            left: width / 8,
+            top: height * 3 / 4,
+            width: width / 4,
+            height: height / 12,
+            entity_type: "DEMO_FOOTER".to_string(),
+        });
+
+        // If we have a config with custom regexes, add more "detections"
         if let Some(config) = config {
             if let Some(true) = config.enabled_types.get("CUSTOM_REGEX") {
-                // Real implementation would apply regexes to extracted text regions
                 if !config.custom_regexes.is_empty() {
-                    // Add a second dummy region for custom regexes
+                    // Add a custom regex match in the middle-right area
+                    results.push(RedactionResult {
+                        left: width * 2 / 3,
+                        top: height / 2,
+                        width: width / 5,
+                        height: height / 15,
+                        entity_type: "CUSTOM_REGEX".to_string(),
+                    });
+                }
+            }
+
+            // If deny list is enabled, add a simulated detection
+            if let Some(true) = config.enabled_types.get("DENY_LIST") {
+                if !config.deny_list_tags.is_empty() {
                     results.push(RedactionResult {
                         left: width / 3,
-                        top: height / 3,
+                        top: height * 2 / 3,
                         width: width / 4,
-                        height: height / 4,
-                        entity_type: "CUSTOM_REGEX".to_string(),
+                        height: height / 18,
+                        entity_type: "DENY_LIST".to_string(),
                     });
                 }
             }

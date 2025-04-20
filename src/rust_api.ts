@@ -28,7 +28,7 @@ class RustApi {
       
       return await invoke('redact_base64_image', {
         request: {
-          image_data: imageData,
+          imageData,
           config
         }
       });

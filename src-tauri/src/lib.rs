@@ -11,6 +11,7 @@ fn greet(name: &str) -> String {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Base64Request {
+    #[serde(rename = "imageData")]
     image_data: String,
     config: Option<RedactionConfig>,
 }
