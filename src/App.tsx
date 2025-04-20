@@ -89,34 +89,20 @@ function App() {
     };
   }, []);
 
-  // Check API status periodically
+  // Check API status once on component mount
   useEffect(() => {
-    // Check API status on app load
     const checkApi = async () => {
       try {
         const isRunning = await checkApiStatus();
-        if (isRunning) {
-          setApiStatus('running');
-          setApiError(null);
-        } else {
-          setApiStatus('error');
-          setApiError('Could not connect to the API server');
-        }
+        setApiStatus(isRunning ? 'running' : 'error');
+        setApiError(isRunning ? null : 'Could not connect to the API server');
       } catch (error) {
         setApiStatus('error');
         setApiError('Error checking API status');
       }
     };
     
-    // Run the initial check
     checkApi();
-    
-    // Set up periodic checks (every 10 seconds)
-    const intervalId = setInterval(checkApi, 10000);
-    
-    return () => {
-      clearInterval(intervalId);
-    };
   }, []);
 
   // Cleanup on unmount
@@ -127,37 +113,18 @@ function App() {
     };
   }, []);
 
-  // Function to clean up image data and help GC
+  // Function to clean up image data
   const cleanupImageData = () => {
-    try {
-      // Clear image state
-      if (image) {
-        // Revoke any object URLs to prevent memory leaks
-        if (image.startsWith('blob:')) {
-          URL.revokeObjectURL(image);
-        }
-        setImage(null);
-      }
-      
-      // Clear redacted image state
-      if (redactedImage) {
-        // Revoke any object URLs to prevent memory leaks
-        if (redactedImage.startsWith('blob:')) {
-          URL.revokeObjectURL(redactedImage);
-        }
-        setRedactedImage(null);
-      }
-      
-      // Suggest garbage collection when browser is idle
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        // @ts-ignore - TypeScript might not know requestIdleCallback
-        window.requestIdleCallback(() => {
-          console.log("Cleaned up image data");
-        });
-      }
-    } catch (error) {
-      console.error("Error cleaning up images:", error);
+    if (image && image.startsWith('blob:')) {
+      URL.revokeObjectURL(image);
     }
+    
+    if (redactedImage && redactedImage.startsWith('blob:')) {
+      URL.revokeObjectURL(redactedImage);
+    }
+    
+    setImage(null);
+    setRedactedImage(null);
   };
 
   // Handle API retry
@@ -165,14 +132,13 @@ function App() {
     setApiStatus('unknown');
     setApiError('Attempting to reconnect to API...');
     
-    // Just check if the API is running - we no longer try to start it
-    const isRunning = await checkApiStatus();
-    if (isRunning) {
-      setApiStatus('running');
-      setApiError(null);
-    } else {
+    try {
+      const isRunning = await checkApiStatus();
+      setApiStatus(isRunning ? 'running' : 'error');
+      setApiError(isRunning ? null : 'Failed to connect to the API server');
+    } catch (error) {
       setApiStatus('error');
-      setApiError('Failed to connect to the API server. Make sure it is running.');
+      setApiError('Failed to connect to the API server');
     }
   };
 
@@ -181,7 +147,6 @@ function App() {
     e.preventDefault();
     setIsDragging(false);
     
-    // Clean up previous image data
     cleanupImageData();
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -197,7 +162,7 @@ function App() {
       if (e.clipboardData && e.clipboardData.files.length > 0) {
         const file = e.clipboardData.files[0];
         if (file.type.startsWith('image/')) {
-          cleanupImageData(); // Clean up previous image data
+          cleanupImageData();
           handleImageFile(file);
         }
       }
@@ -209,63 +174,32 @@ function App() {
 
   // Process image file
   const handleImageFile = (file: File) => {
-    // Check API status first
     if (apiStatus === 'error') {
-      setApiError('Cannot process image: API server is not running. Please try reconnecting.');
+      setApiError('Cannot process image: API server is not running');
       return;
     }
 
     if (!file.type.match('image.*') && !file.name.endsWith('.dcm')) {
-      // Show error for non-image files
       setApiError('Only image files are supported');
       return;
     }
     
-    // Check file size - warn if over 5MB to prevent excessive memory usage
-    const MAX_FILE_SIZE_MB = 5;
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      console.warn(`Large file detected (${(file.size / (1024 * 1024)).toFixed(2)}MB). This may cause performance issues.`);
-      // We'll still process it, but warn the user in the console
-    }
-
-    // Save the original filename
     setOriginalFileName(file.name);
     
-    // Use more memory-efficient approach for FileReader
     const reader = new FileReader();
-    
-    // Set up completion handler before starting read
     reader.onload = (e) => {
       if (e.target && typeof e.target.result === 'string') {
-        // Process immediately and then set image state
-        // to avoid keeping multiple copies of large strings
         const imageData = e.target.result;
-        
-        // Set image first so user sees something happening
         setImage(imageData);
-        
-        // Process the image (this copies the data again, but we need it for display too)
         processImage(imageData);
-        
-        // Ensure content is scrolled to top when new image is loaded
         window.scrollTo(0, 0);
-        
-        // Clear the FileReader result to help garbage collection
-        reader.onload = null;
-        reader.onerror = null;
       }
     };
     
-    // Set up error handler
     reader.onerror = () => {
-      console.error("FileReader error:", reader.error);
       setApiError('Failed to read image file');
-      reader.abort();
-      reader.onload = null;
-      reader.onerror = null;
     };
     
-    // Start reading the file
     reader.readAsDataURL(file);
   };
 
@@ -275,19 +209,11 @@ function App() {
     setApiError(null);
     
     try {
-      // Check API status before processing
       if (apiStatus === 'error') {
-        throw new Error('API server is not running. Please check the connection or try restarting.');
+        throw new Error('API server is not running');
       }
       
-      // Create a local copy to avoid keeping reference to the original string
-      // which might be referenced in the upper scope
-      const imageDataCopy = imageData;
-      
-      // Log size of data for debugging
-      console.log(`Processing image of size: ${(imageDataCopy.length / 1024).toFixed(2)}KB`);
-      
-      // Create configuration object for Python backend
+      // Create configuration object
       const config = {
         enabledTypes,
         redactionMethod,
@@ -296,10 +222,8 @@ function App() {
         customRegexes
       };
       
-      // Call our unified API service that handles both web and Tauri environments
-      const result = await processImageApi(imageDataCopy, config);
+      const result = await processImageApi(imageData, config);
       
-      // Cast result to the expected type
       interface ProcessingResult {
         success: boolean;
         redactedImage: string;
@@ -309,54 +233,18 @@ function App() {
       
       const typedResult = result as ProcessingResult;
       
-      // Clear references to large data before React re-renders
-      // This helps free memory immediately rather than waiting for GC
-      const resultImageData = typedResult.redactedImage;
-      let resultRedactionCount = 0;
-      
       if (typedResult.success) {
-        // Clear old redacted image if it exists
-        if (redactedImage) {
-          URL.revokeObjectURL(redactedImage.startsWith('blob:') ? redactedImage : '');
-        }
-        
-        resultRedactionCount = typedResult.redactionCount;
-        
-        // Update state with the result
-        setRedactedImage(resultImageData);
-        setRedactionCount(resultRedactionCount);
+        setRedactedImage(typedResult.redactedImage);
+        setRedactionCount(typedResult.redactionCount);
       } else {
-        console.error("Error processing image:", typedResult.error);
         setApiError(typedResult.error || 'Unknown error');
       }
     } catch (error) {
       console.error("Error processing image:", error);
       setApiError(error instanceof Error ? error.message : 'Failed to connect to API server');
-      setApiStatus('error'); // Mark API as having an error if processing fails
+      setApiStatus('error');
     } finally {
       setIsProcessing(false);
-      
-      // Force garbage collection through reference removal
-      // The imageData parameter will be cleaned up by the API service
-      try {
-        // In browser environments, we rely on JavaScript's garbage collection
-        // We've already cleaned up references which is the best we can do
-        
-        // Allow a moment for React to finish rendering before
-        // suggesting garbage collection to the browser
-        setTimeout(() => {
-          // This sets empty string to any dangling references
-          // and suggests to browser it's a good time for GC
-          if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-            // @ts-ignore - TypeScript might not know requestIdleCallback
-            window.requestIdleCallback(() => {
-              console.log("Suggesting cleanup to browser");
-            });
-          }
-        }, 100);
-      } catch (e) {
-        console.log("Error during cleanup:", e);
-      }
     }
   };
 
@@ -368,7 +256,6 @@ function App() {
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Clean up previous image data
       cleanupImageData();
       handleImageFile(e.target.files[0]);
     }
@@ -388,18 +275,15 @@ function App() {
         
         // Generate the output filename with "-redacted" suffix
         const generateRedactedFilename = (original: string) => {
-          // Split filename by last period to separate name and extension
           const lastDotIndex = original.lastIndexOf('.');
           
           if (lastDotIndex === -1) {
-            // No extension found
             return `${original}-redacted`;
           }
           
           const name = original.substring(0, lastDotIndex);
           const extension = original.substring(lastDotIndex + 1);
           
-          // Don't append -redacted if it's already there
           if (name.endsWith('-redacted')) {
             return original;
           }
@@ -407,7 +291,6 @@ function App() {
           return `${name}-redacted.${extension}`;
         };
         
-        // Generate the filename
         const fileName = generateRedactedFilename(originalFileName);
         
         // Create link and trigger download
@@ -440,7 +323,6 @@ function App() {
     setImage(null);
     setRedactedImage(null);
     setRedactionCount(0);
-    // Reset scroll position
     window.scrollTo(0, 0);
   };
 
@@ -523,7 +405,6 @@ function App() {
   // Toggle dark mode
   const toggleDarkMode = () => {
     setDarkMode(prevDarkMode => !prevDarkMode);
-    // Apply dark mode class to body
     if (!darkMode) {
       document.body.classList.add('dark-mode');
     } else {
@@ -544,10 +425,8 @@ function App() {
       }
     };
     
-    // Add listener for changes in system dark mode preference
     mediaQuery.addEventListener('change', handleChange);
     
-    // Clean up
     return () => {
       mediaQuery.removeEventListener('change', handleChange);
     };
@@ -573,31 +452,25 @@ function App() {
             style={{ display: 'none' }} 
           />
           {apiStatus === 'error' && (
-            <div className="api-error-container">
-              <div className="api-error">
-                <h3>API Connection Error</h3>
-                <p>The API server is not responding.</p>
-                <p>Please make sure the application has proper permissions to run.</p>
-                <button onClick={handleApiRetry} className="retry-button">
-                  Retry Connection
-                </button>
-              </div>
+            <div className="api-error-banner">
+              <p>API Connection Error</p>
+              <p>Please make sure the application has proper permissions to run.</p>
+              <button onClick={handleApiRetry} className="retry-button">
+                Retry Connection
+              </button>
             </div>
           )}
         </>
       ) : (
         <div className="content-area" ref={contentRef}>
           {apiError && (
-            <div className="api-error-container">
-              <div className="api-error">
-                <h3>API Connection Error</h3>
-                <p>The API server is not responding.</p>
+              <div className="api-error-banner">
+                <p>API Connection Error</p>
                 <p>Please make sure the application has proper permissions to run.</p>
                 <button onClick={handleApiRetry} className="retry-button">
                   Retry Connection
                 </button>
               </div>
-            </div>
             )}
           
           <ImagePreview
