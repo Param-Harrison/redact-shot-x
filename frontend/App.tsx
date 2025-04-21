@@ -643,6 +643,8 @@ function App() {
             setIsDragging={setIsDragging}
             handleDrop={handleDrop}
             handleFileSelect={handleFileSelect}
+            acceptedFileTypes="image/*,.dcm"
+            showToast={showToast}
           />
           <input 
             type="file" 

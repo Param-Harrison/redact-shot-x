@@ -5,14 +5,64 @@ interface DropZoneProps {
   setIsDragging: (isDragging: boolean) => void;
   handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   handleFileSelect: () => void;
+  acceptedFileTypes?: string;
+  showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 const DropZone: React.FC<DropZoneProps> = ({ 
   isDragging, 
   setIsDragging, 
   handleDrop, 
-  handleFileSelect 
+  handleFileSelect,
+  acceptedFileTypes = "image/*,.dcm",
+  showToast
 }) => {
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      
+      if (isFileTypeAccepted(file)) {
+        handleDrop(e);
+      } else {
+        e.stopPropagation();
+        if (showToast) {
+          showToast('Only image files are supported', 'error');
+        } else {
+          // Fallback to alert if no toast function is provided
+          alert('Only image files are supported');
+        }
+      }
+    }
+  };
+  
+  const isFileTypeAccepted = (file: File): boolean => {
+    if (!acceptedFileTypes) return true;
+    
+    if (file.type && acceptedFileTypes.includes(file.type)) {
+      return true;
+    }
+    
+    if (acceptedFileTypes.includes(",.dcm")) {
+      const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (fileExt === '.dcm') return true;
+    }
+    
+    if (acceptedFileTypes.includes("image/*") && file.type.startsWith('image/')) {
+      return true;
+    }
+    
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.svg'];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (imageExtensions.includes(fileExt)) {
+      return true;
+    }
+    
+    return false;
+  };
+
   return (
     <div 
       className={`drop-area ${isDragging ? 'dragging' : ''}`}
@@ -21,8 +71,9 @@ const DropZone: React.FC<DropZoneProps> = ({
         setIsDragging(true);
       }}
       onDragLeave={() => setIsDragging(false)}
-      onDrop={handleDrop}
+      onDrop={onDrop}
       onClick={handleFileSelect}
+      data-accepted-files={acceptedFileTypes}
     >
       <div className="drop-content">
         <div className="drop-icon">
@@ -36,7 +87,7 @@ const DropZone: React.FC<DropZoneProps> = ({
         <button 
           className="primary-button upload-button" 
           onClick={(e) => {
-            e.stopPropagation(); // Prevent double triggering
+            e.stopPropagation();
             handleFileSelect();
           }}
         >
