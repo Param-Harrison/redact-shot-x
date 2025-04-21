@@ -92,17 +92,10 @@ def get_html_path():
         # Running in a PyInstaller bundle
         base_path = os.path.dirname(sys.executable)
         html_path = os.path.join(base_path, 'web', 'index.html')
+        return f"file://{html_path}" if os.path.exists(html_path) else "http://localhost:3000"
     else:
-        # Running in development
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        html_path = os.path.join(base_path, 'dist-web', 'index.html')
-        
-        # If not built yet, try to use Vite development server
-        if not os.path.exists(html_path):
-            return "http://localhost:3000"
-    
-    # Convert to URL for Windows compatibility
-    return f"file://{html_path}" if os.path.exists(html_path) else "http://localhost:3000"
+        # In development, always use Vite
+        return "http://localhost:3000"
 
 def get_icon_path():
     """Get the appropriate icon path for the current platform"""
@@ -182,8 +175,7 @@ def main():
             height=WINDOW_HEIGHT,
             min_size=(800, 600),
             text_select=True,
-            confirm_close=True,
-            icon=icon_path
+            confirm_close=True
         )
         webview.start(debug=True if "--debug" in sys.argv else False)
         
