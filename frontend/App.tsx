@@ -35,6 +35,8 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'unknown' | 'running' | 'error'>('unknown');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check if user has a system preference for dark mode
     const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -164,7 +166,7 @@ function App() {
   // Handle API retry
   const handleApiRetry = async () => {
     setApiStatus('unknown');
-    setApiError('Attempting to reconnect to API...');
+    setApiError('Connecting to service...');
     
     // Just check if the API is running - we no longer try to start it
     const isRunning = await checkApiStatus();
@@ -173,8 +175,19 @@ function App() {
       setApiError(null);
     } else {
       setApiStatus('error');
-      setApiError('Failed to connect to the API server. Make sure it is running.');
+      setApiError('Connection to image processing service failed. Please try again.');
     }
+  };
+
+  // Show toast notification
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage(message);
+    setToastType(type);
+    
+    // Auto-hide toast after 4 seconds
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
   };
 
   // Handle file drop
@@ -182,11 +195,23 @@ function App() {
     e.preventDefault();
     setIsDragging(false);
     
+    // Clear any previous errors
+    setApiError(null);
+    
     // Clean up previous image data
     cleanupImageData();
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
+      
+      // Only allow image files by extension
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.svg', '.dcm'];
+      const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (!imageExtensions.includes(fileExt)) {
+        showToast('Only image files are supported', 'error');
+        return;
+      }
+      
       setOriginalFileName(file.name);
       handleImageFile(file);
     }
@@ -196,10 +221,25 @@ function App() {
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (e.clipboardData && e.clipboardData.files.length > 0) {
+        // Clear any previous errors
+        setApiError(null);
+        
         const file = e.clipboardData.files[0];
+        
+        // Allow by MIME type or file extension
         if (file.type.startsWith('image/')) {
           cleanupImageData(); // Clean up previous image data
           handleImageFile(file);
+        } else {
+          // Check by extension for special formats like DICOM
+          const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.svg', '.dcm'];
+          const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+          if (imageExtensions.includes(fileExt)) {
+            cleanupImageData();
+            handleImageFile(file);
+          } else {
+            showToast('Only image files are supported', 'error');
+          }
         }
       }
     };
@@ -212,13 +252,13 @@ function App() {
   const handleImageFile = (file: File) => {
     // Check API status first
     if (apiStatus === 'error') {
-      setApiError('Cannot process image: API server is not running. Please try reconnecting.');
+      showToast('Image processing service is not available. Please try again later.', 'error');
       return;
     }
 
     if (!file.type.match('image.*') && !file.name.endsWith('.dcm')) {
       // Show error for non-image files
-      setApiError('Only image files are supported');
+      showToast('Only image files are supported', 'error');
       return;
     }
     
@@ -226,6 +266,7 @@ function App() {
     const MAX_FILE_SIZE_MB = 5;
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       console.warn(`Large file detected (${(file.size / (1024 * 1024)).toFixed(2)}MB). This may cause performance issues.`);
+      showToast(`Large image (${(file.size / (1024 * 1024)).toFixed(1)}MB) may cause slower processing`, 'info');
       // We'll still process it, but warn the user in the console
     }
 
@@ -260,7 +301,7 @@ function App() {
     // Set up error handler
     reader.onerror = () => {
       console.error("FileReader error:", reader.error);
-      setApiError('Failed to read image file');
+      showToast('Unable to read the selected file', 'error');
       reader.abort();
       reader.onload = null;
       reader.onerror = null;
@@ -278,7 +319,7 @@ function App() {
     try {
       // Check API status before processing
       if (apiStatus === 'error') {
-        throw new Error('API server is not running. Please check the connection or try restarting.');
+        throw new Error('The image processing service is unavailable. Please try again later.');
       }
       
       // Create a local copy to avoid keeping reference to the original string
@@ -318,11 +359,11 @@ function App() {
         setRedactionCount(resultRedactionCount);
       } else {
         console.error("Error processing image:", result.error);
-        setApiError(result.error || 'Unknown error');
+        setApiError(result.error || 'An error occurred while processing the image');
       }
     } catch (error) {
       console.error("Error processing image:", error);
-      setApiError(error instanceof Error ? error.message : 'Failed to connect to API server');
+      setApiError(error instanceof Error ? error.message : 'Unable to process the image');
       setApiStatus('error'); // Mark API as having an error if processing fails
     } finally {
       setIsProcessing(false);
@@ -359,9 +400,27 @@ function App() {
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      // Clear any previous errors
+      setApiError(null);
+      
       // Clean up previous image data
       cleanupImageData();
-      handleImageFile(e.target.files[0]);
+      
+      const file = e.target.files[0];
+      
+      // Only allow image files by extension
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.svg', '.dcm'];
+      const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (!imageExtensions.includes(fileExt)) {
+        showToast('Only image files are supported', 'error');
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+      
+      handleImageFile(file);
     }
   };
 
@@ -548,6 +607,35 @@ function App() {
     <main className={`app-container ${darkMode ? 'dark-mode' : ''}`} style={{ minHeight: `${viewportHeight}px` }}>
       <Header openSettings={openSettings} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
 
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`toast-notification ${toastType}`}>
+          <div className="toast-content">
+            {toastType === 'error' && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+            )}
+            {toastType === 'success' && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            )}
+            {toastType === 'info' && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            )}
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
+
       {!image ? (
         <>
           <DropZone
@@ -563,10 +651,9 @@ function App() {
             accept="image/*,.dcm" 
             style={{ display: 'none' }} 
           />
-          {apiStatus === 'error' && (
+          {apiStatus === 'error' && !toastMessage && (
             <div className="api-error-banner">
-              <p>Error: {apiError || 'Cannot connect to API server'}</p>
-              <p>The API server at {API_URL} is not responding.</p>
+              <p>Image processing service is unavailable</p>
               <button onClick={handleApiRetry} className="retry-button">
                 Retry Connection
               </button>
@@ -578,7 +665,6 @@ function App() {
           {apiError && (
             <div className="api-error-message">
               <p>Error: {apiError}</p>
-              <p>Make sure the Python API server is running at {API_URL}</p>
               {apiStatus === 'error' && (
                 <button onClick={handleApiRetry} className="retry-button">
                   Retry Connection
