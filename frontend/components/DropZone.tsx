@@ -6,7 +6,7 @@ interface DropZoneProps {
   handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   handleFileSelect: () => void;
   acceptedFileTypes?: string;
-  showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
+  showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
 }
 
 const DropZone: React.FC<DropZoneProps> = ({ 

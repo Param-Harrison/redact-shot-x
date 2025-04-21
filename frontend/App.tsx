@@ -36,7 +36,7 @@ function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'unknown' | 'running' | 'error'>('unknown');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('info');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check if user has a system preference for dark mode
     const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -180,9 +180,9 @@ function App() {
   };
 
   // Show toast notification
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     setToastMessage(message);
-    setToastType(type);
+    setToastType(type === 'warning' ? 'info' : type); // Handle warning as info for now
     
     // Auto-hide toast after 4 seconds
     setTimeout(() => {
@@ -260,6 +260,17 @@ function App() {
       // Show error for non-image files
       showToast('Only image files are supported', 'error');
       return;
+    }
+    
+    // Additional validation for common image formats
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/tiff', 'image/bmp', 'image/svg+xml'];
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.svg', '.dcm'];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    
+    // Skip validation for DICOM files which often don't have a proper MIME type
+    if (!fileExt.endsWith('.dcm') && !validImageTypes.includes(file.type) && !imageExtensions.includes(fileExt)) {
+      showToast('This file may not be a supported image format', 'warning');
+      // Continue anyway, but warn the user
     }
     
     // Check file size - warn if over 5MB to prevent excessive memory usage
@@ -359,11 +370,28 @@ function App() {
         setRedactionCount(resultRedactionCount);
       } else {
         console.error("Error processing image:", result.error);
-        setApiError(result.error || 'An error occurred while processing the image');
+        
+        // Handle specific error cases
+        const errorMsg = result.error || '';
+        if (errorMsg.includes("cannot identify image file")) {
+          setApiError("This file appears to be an unsupported or corrupted image format. Please try a different image or convert it to a common format like PNG or JPG.");
+          showToast("Unsupported or corrupted image format", "error");
+        } else {
+          setApiError(errorMsg || 'An error occurred while processing the image');
+        }
       }
     } catch (error) {
       console.error("Error processing image:", error);
-      setApiError(error instanceof Error ? error.message : 'Unable to process the image');
+      
+      // Handle specific error messages
+      const errorMsg = error instanceof Error ? error.message : 'Unable to process the image';
+      if (errorMsg.includes("cannot identify image file")) {
+        setApiError("This file appears to be an unsupported or corrupted image format. Please try a different image or convert it to a common format like PNG or JPG.");
+        showToast("Unsupported or corrupted image format", "error");
+      } else {
+        setApiError(errorMsg);
+      }
+      
       setApiStatus('error'); // Mark API as having an error if processing fails
     } finally {
       setIsProcessing(false);
