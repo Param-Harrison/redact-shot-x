@@ -7,7 +7,9 @@ import signal
 import webview
 import logging
 import uvicorn
+import platform
 from multiprocessing import Process
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -102,6 +104,45 @@ def get_html_path():
     # Convert to URL for Windows compatibility
     return f"file://{html_path}" if os.path.exists(html_path) else "http://localhost:3000"
 
+def get_icon_path():
+    """Get the appropriate icon path for the current platform"""
+    base_path = Path(os.path.dirname(os.path.abspath(__file__)))
+    assets_path = base_path / "assets"
+
+    # Default icon path is the SVG file
+    icon_path = assets_path / "icon.svg"
+    
+    # Use platform-specific icons if available
+    if platform.system() == "Windows":
+        platform_icon = assets_path / "icon.ico"
+        if platform_icon.exists():
+            icon_path = platform_icon
+    elif platform.system() == "Darwin":  # macOS
+        platform_icon = assets_path / "icon.icns"
+        if platform_icon.exists():
+            icon_path = platform_icon
+    else:  # Linux and other platforms
+        # On Linux, look for PNG icons in various sizes
+        for size in [256, 128, 64]:
+            platform_icon = assets_path / "png" / f"icon_{size}x{size}.png"
+            if platform_icon.exists():
+                icon_path = platform_icon
+                break
+    
+    # If running in a PyInstaller bundle, adjust the path
+    if getattr(sys, 'frozen', False):
+        # When frozen, the assets should be in the same directory as the executable
+        base_path = Path(os.path.dirname(sys.executable))
+        # Try to find the icon in the executable directory
+        for icon_name in ["icon.svg", "icon.ico", "icon.icns"]:
+            potential_icon = base_path / "assets" / icon_name
+            if potential_icon.exists():
+                icon_path = potential_icon
+                break
+    
+    # Return None if the icon doesn't exist
+    return str(icon_path) if icon_path.exists() else None
+
 def main():
     """Main entry point for the application"""
     global api_process
@@ -125,6 +166,13 @@ def main():
         html_path = get_html_path()
         logger.info(f"Using HTML path: {html_path}")
         
+        # Get the icon path
+        icon_path = get_icon_path()
+        if icon_path:
+            logger.info(f"Using application icon: {icon_path}")
+        else:
+            logger.warning("No application icon found, using default")
+        
         # Create and start the window
         logger.info("Starting pywebview window")
         webview.create_window(
@@ -134,7 +182,8 @@ def main():
             height=WINDOW_HEIGHT,
             min_size=(800, 600),
             text_select=True,
-            confirm_close=True
+            confirm_close=True,
+            icon=icon_path
         )
         webview.start(debug=True if "--debug" in sys.argv else False)
         

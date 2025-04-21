@@ -17,6 +17,7 @@ DIST_DIR = ROOT_DIR / "dist"
 BUILD_DIR = ROOT_DIR / "build"
 SPEC_FILE = ROOT_DIR / "redactshotx.spec"
 FRONTEND_DIR = ROOT_DIR / "dist-web"
+ASSETS_DIR = ROOT_DIR / "assets"
 
 def setup_venv():
     """Set up and activate virtual environment if it doesn't exist"""
@@ -78,6 +79,38 @@ def build_frontend():
         print("❌ Frontend build failed: dist-web directory not found")
         sys.exit(1)
 
+def ensure_icons_exist():
+    """Make sure icon files exist for all platforms"""
+    print("🔍 Checking for application icons...")
+    
+    # Check for SVG icon and generate platform-specific icons if needed
+    svg_icon = ASSETS_DIR / "icon.svg"
+    ico_icon = ASSETS_DIR / "icon.ico"
+    icns_icon = ASSETS_DIR / "icon.icns"
+    
+    # Create assets directory if it doesn't exist
+    if not ASSETS_DIR.exists():
+        os.makedirs(ASSETS_DIR, exist_ok=True)
+    
+    # Check if we need to generate icons
+    if (not svg_icon.exists() or 
+        not ico_icon.exists() or 
+        not icns_icon.exists()):
+        
+        if svg_icon.exists():
+            print("📄 Generating platform-specific icons from SVG...")
+            
+            # Check if the icon generator script exists
+            generator_script = ROOT_DIR / "generate_icons.py"
+            if generator_script.exists():
+                subprocess.run([str(generator_script)], check=True)
+            else:
+                print("⚠️ Icon generator script not found. Platform-specific icons may be missing.")
+        else:
+            print("⚠️ SVG icon not found. Application will use default icons.")
+    else:
+        print("✅ All platform icons found.")
+
 def create_pyinstaller_spec(python_path):
     """Create or update PyInstaller spec file"""
     print("📝 Creating PyInstaller spec file...")
@@ -85,6 +118,13 @@ def create_pyinstaller_spec(python_path):
     # Remove existing spec file if it exists
     if SPEC_FILE.exists():
         SPEC_FILE.unlink()
+    
+    # Set icon paths based on platform
+    ico_path = ASSETS_DIR / "icon.ico"
+    icns_path = ASSETS_DIR / "icon.icns"
+    
+    ico_str = f"'{ico_path}'" if ico_path.exists() else "None"
+    icns_str = f"'{icns_path}'" if icns_path.exists() else "None"
     
     # Create the spec file content
     spec_content = f"""# -*- mode: python ; coding: utf-8 -*-
@@ -150,7 +190,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='{ROOT_DIR / "assets" / "icon.ico"}' if os.path.exists('{ROOT_DIR / "assets" / "icon.ico"}') else None,
+    icon={ico_str},
 )
 
 coll = COLLECT(
@@ -168,7 +208,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='RedactShotX.app',
-    icon='{ROOT_DIR / "assets" / "icon.icns"}' if os.path.exists('{ROOT_DIR / "assets" / "icon.icns"}') else None,
+    icon={icns_str},
     bundle_identifier='com.redactshotx.app',
     info_plist={{
         'NSPrincipalClass': 'NSApplication',
@@ -226,6 +266,9 @@ def main():
             if not FRONTEND_DIR.exists():
                 print("❌ Frontend dist directory not found. Please build frontend first.")
                 sys.exit(1)
+        
+        # Ensure icons exist
+        ensure_icons_exist()
         
         # Create spec file and build package
         spec_file = create_pyinstaller_spec(python_path)
