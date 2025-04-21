@@ -5,18 +5,21 @@ import Footer from "./components/Footer";
 import DropZone from "./components/DropZone";
 import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
-import SettingsModal, { EnabledTypesRecord as SettingsEnabledTypesRecord } from "./components/SettingsModal";
-import { processImage as processImageApi, checkApiStatus } from "./services/api";
-import { API_URL } from "./constants";
+import SettingsModal, { EnabledTypesRecord } from "./components/SettingsModal";
+import { processImage as processImageApi, checkApiStatus, processBulkImages as processBulkImagesApi } from "./services/api";
+import { API_URL, FEATURES } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
-// This is adjusted to match SettingsModal's EnabledTypesRecord type
-type EnabledTypesRecord = {
-  CUSTOM_REGEX: boolean;
-  DENY_LIST: boolean;
-  ALLOW_LIST: boolean;
-  [key: string]: boolean;
-};
+type ToastType = 'success' | 'error' | 'info' | 'warning';
+
+// Existing interface for RedactedRegions
+interface RedactedRegion {
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 function App() {
   const [image, setImage] = useState<string | null>(null);
@@ -36,7 +39,7 @@ function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'unknown' | 'running' | 'error'>('unknown');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('info');
+  const [toastType, setToastType] = useState<ToastType>('info');
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check if user has a system preference for dark mode
     const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -49,12 +52,33 @@ function App() {
     return prefersDarkMode;
   });
   
-  // Keep only custom types
+  // Create state for redaction settings
   const [enabledTypes, setEnabledTypes] = useState<EnabledTypesRecord>({
-    // Custom
+    PHONE_NUMBER: true,
+    EMAIL_ADDRESS: true,
+    CREDIT_CARD: true,
+    US_SSN: true,
+    URL: true,
+    LOCATION: true,
+    PERSON: true,
+    DATE_TIME: true,
+    US_PASSPORT: true,
+    IP_ADDRESS: true,
+    BANK_ROUTING: true,
+    US_DRIVER_LICENSE: true,
+    CRYPTO_ADDRESS: true,
+    
+    // These are optional by default
+    ORGANIZATION: false,
+    US_ITIN: false,
+    US_BANK_NUMBER: false,
+    IBAN_CODE: false,
+    
+    // Custom settings that need additional input
     CUSTOM_REGEX: false,
     DENY_LIST: false,
     ALLOW_LIST: false,
+    BULK_UPLOAD: FEATURES.ENABLE_BULK_UPLOAD, // Initialize from feature flag
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +87,8 @@ function App() {
   const denyListInputRef = useRef<HTMLInputElement>(null);
   const regexPatternInputRef = useRef<HTMLInputElement>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("redacted-image");
+  const [bulkImages, setBulkImages] = useState<{file: File, processed: boolean, result?: any}[]>([]);
+  const [isBulkProcessing, setIsBulkProcessing] = useState<boolean>(false);
 
   // Enhanced viewport handling for orientation changes
   useEffect(() => {
@@ -180,7 +206,7 @@ function App() {
   };
 
   // Show toast notification
-  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  const showToast = (message: string, type: ToastType = 'info') => {
     setToastMessage(message);
     setToastType(type === 'warning' ? 'info' : type); // Handle warning as info for now
     
@@ -201,7 +227,27 @@ function App() {
     // Clean up previous image data
     cleanupImageData();
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      // Handle bulk upload
+      if (FEATURES.ENABLE_BULK_UPLOAD && e.dataTransfer.files.length > 1) {
+        const files = Array.from(e.dataTransfer.files);
+        const imageFiles = files.filter(file => {
+          // Filter for image files by extension
+          const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.svg', '.dcm'];
+          const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+          return imageExtensions.includes(fileExt) || file.type.startsWith('image/');
+        });
+        
+        if (imageFiles.length === 0) {
+          showToast('No valid image files found', 'error');
+          return;
+        }
+        
+        handleBulkImages(imageFiles);
+        return;
+      }
+      
+      // Single file handling (existing logic)
       const file = e.dataTransfer.files[0];
       
       // Only allow image files by extension
@@ -427,13 +473,37 @@ function App() {
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files && e.target.files.length > 0) {
       // Clear any previous errors
       setApiError(null);
       
       // Clean up previous image data
       cleanupImageData();
       
+      // Handle bulk upload
+      if (FEATURES.ENABLE_BULK_UPLOAD && e.target.files.length > 1) {
+        const files = Array.from(e.target.files);
+        const imageFiles = files.filter(file => {
+          // Filter for image files by extension
+          const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.tiff', '.tif', '.bmp', '.svg', '.dcm'];
+          const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+          return imageExtensions.includes(fileExt) || file.type.startsWith('image/');
+        });
+        
+        if (imageFiles.length === 0) {
+          showToast('No valid image files found', 'error');
+          // Reset the file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+          return;
+        }
+        
+        handleBulkImages(imageFiles);
+        return;
+      }
+      
+      // Single file handling (existing logic)
       const file = e.target.files[0];
       
       // Only allow image files by extension
@@ -506,7 +576,7 @@ function App() {
   };
 
   // Toggle redaction type
-  const toggleRedactionType = (type: keyof SettingsEnabledTypesRecord) => {
+  const toggleRedactionType = (type: keyof EnabledTypesRecord) => {
     setEnabledTypes(prev => ({
       ...prev,
       [type]: !prev[type as keyof EnabledTypesRecord]
@@ -631,6 +701,278 @@ function App() {
     };
   }, []);
 
+  // Handle bulk image processing
+  const handleBulkImages = (files: File[]) => {
+    // Check API status first
+    if (apiStatus === 'error') {
+      showToast('Image processing service is not available. Please try again later.', 'error');
+      return;
+    }
+    
+    setBulkImages(files.map(file => ({ file, processed: false })));
+    setIsBulkProcessing(true);
+    
+    // Process images one by one or use the bulk API endpoint
+    processBulkImages(files);
+  };
+  
+  // Process multiple images using the bulk API
+  const processBulkImages = async (files: File[]) => {
+    try {
+      setIsProcessing(true);
+      
+      // Create config object with available state variables
+      const config = {
+        redactionMethod: redactionMethod,
+        enabledTypes: enabledTypes,
+        customRegexes: customRegexes,
+        allowListTags: allowListTags,
+        denyListTags: denyListTags
+      };
+      
+      // Use the API service
+      const result = await processBulkImagesApi(files, config);
+      
+      // Update state with results
+      if (result.results) {
+        setBulkImages(prevImages => 
+          prevImages.map(img => {
+            const resultItem = result.results.find((r: any) => r.filename === img.file.name);
+            if (resultItem) {
+              return { ...img, processed: true, result: resultItem };
+            }
+            return img;
+          })
+        );
+        
+        // Show summary toast
+        const successCount = result.results.filter((r: any) => r.success).length;
+        showToast(`Processed ${successCount} of ${files.length} images`, 'success');
+      }
+    } catch (error) {
+      console.error("Error processing bulk images:", error);
+      showToast('Failed to process images. Please try again.', 'error');
+    } finally {
+      setIsProcessing(false);
+      setIsBulkProcessing(false);
+    }
+  };
+  
+  // Component for displaying bulk processed images
+  const BulkImageGallery = () => {
+    if (!bulkImages.length) return null;
+    
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    
+    const downloadImage = async (img: typeof bulkImages[0]) => {
+      if (!img.processed || !img.result?.success || !img.result.redactedImage) return;
+      
+      try {
+        // For base64 images, convert to blob for download
+        const base64Data = img.result.redactedImage.split(';base64,').pop() || '';
+        const mimeType = img.result.redactedImage.split(';')[0].split(':')[1];
+        const blob = await fetch(`data:${mimeType};base64,${base64Data}`).then(res => res.blob());
+        
+        // Create object URL for the blob
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Generate the output filename with "-redacted" suffix
+        const generateRedactedFilename = (original: string) => {
+          // Split filename by last period to separate name and extension
+          const lastDotIndex = original.lastIndexOf('.');
+          
+          if (lastDotIndex === -1) {
+            // No extension found
+            return `${original}-redacted`;
+          }
+          
+          const name = original.substring(0, lastDotIndex);
+          const extension = original.substring(lastDotIndex + 1);
+          
+          // Don't append -redacted if it's already there
+          if (name.endsWith('-redacted')) {
+            return original;
+          }
+          
+          return `${name}-redacted.${extension}`;
+        };
+        
+        // Generate the filename
+        const fileName = generateRedactedFilename(img.file.name);
+        
+        // Create link and trigger download
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up object URL
+        URL.revokeObjectURL(blobUrl);
+      } catch (error) {
+        console.error("Error exporting image:", error);
+        showToast("Failed to export image. Please try again.", "error");
+      }
+    };
+    
+    const downloadAllImages = async () => {
+      const successImages = bulkImages.filter(img => 
+        img.processed && img.result?.success && img.result.redactedImage
+      );
+      
+      if (successImages.length === 0) return;
+      
+      // Show toast with download progress
+      showToast(`Downloading ${successImages.length} images...`, 'info');
+      
+      // Process each image sequentially to avoid browser issues
+      for (const img of successImages) {
+        await downloadImage(img);
+      }
+      
+      showToast(`Downloaded ${successImages.length} images successfully`, 'success');
+    };
+    
+    const clearGallery = () => {
+      setBulkImages([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+    
+    return (
+      <div className="bulk-image-gallery">
+        <div className="gallery-header">
+          <h2>Processed Images ({bulkImages.filter(img => img.processed && img.result?.success).length}/{bulkImages.length})</h2>
+          <div className="gallery-actions">
+            <button 
+              className="secondary-button" 
+              onClick={clearGallery}
+            >
+              Clear All
+            </button>
+            {bulkImages.some(img => img.processed && img.result?.success) && (
+              <button 
+                className="primary-button" 
+                onClick={downloadAllImages}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download All
+              </button>
+            )}
+          </div>
+        </div>
+        
+        <div className="gallery-grid">
+          {bulkImages.map((img, index) => (
+            <div 
+              key={index} 
+              className={`gallery-item ${img.processed ? (img.result?.success ? 'success' : 'error') : 'processing'}`}
+            >
+              <div className="item-header">
+                <span className="item-filename" title={img.file.name}>{img.file.name}</span>
+                <span className="item-status">
+                  {!img.processed ? 'Processing...' : 
+                    (img.result?.success ? 
+                      `${img.result.redactionCount || 0} redactions` : 
+                      'Failed')}
+                </span>
+              </div>
+              
+              {img.processed && img.result?.success && img.result.redactedImage && (
+                <div 
+                  className="item-preview"
+                  onClick={() => setSelectedImage(img.result.redactedImage)}
+                >
+                  <img 
+                    src={img.result.redactedImage} 
+                    alt={`Redacted ${img.file.name}`} 
+                  />
+                  <div className="preview-overlay">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      <line x1="11" y1="8" x2="11" y2="14"></line>
+                      <line x1="8" y1="11" x2="14" y2="11"></line>
+                    </svg>
+                  </div>
+                </div>
+              )}
+              
+              {img.processed && !img.result?.success && (
+                <div className="item-error">
+                  {img.result?.error || 'Processing failed'}
+                </div>
+              )}
+              
+              {!img.processed && (
+                <div className="item-loading">
+                  <div className="spinner"></div>
+                </div>
+              )}
+              
+              {img.processed && img.result?.success && (
+                <div className="item-actions">
+                  <button 
+                    className="primary-button" 
+                    onClick={() => downloadImage(img)}
+                    disabled={!img.result.redactedImage}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {isProcessing && (
+          <div className="processing-status">
+            <div className="spinner"></div>
+            <p>Processing {bulkImages.filter(img => !img.processed).length} remaining images...</p>
+          </div>
+        )}
+        
+        {/* Image Preview Modal */}
+        {selectedImage && (
+          <div 
+            className="image-preview-modal"
+            onClick={() => setSelectedImage(null)}
+          >
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button 
+                className="close-button"
+                onClick={() => setSelectedImage(null)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <img src={selectedImage} alt="Preview" />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Sync the bulk upload feature flag with enabledTypes state
+  useEffect(() => {
+    // Update the feature flag when enabledTypes.BULK_UPLOAD changes
+    FEATURES.ENABLE_BULK_UPLOAD = enabledTypes.BULK_UPLOAD;
+  }, [enabledTypes.BULK_UPLOAD]);
+
   return (
     <main className={`app-container ${darkMode ? 'dark-mode' : ''}`} style={{ minHeight: `${viewportHeight}px` }}>
       <Header openSettings={openSettings} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
@@ -664,92 +1006,98 @@ function App() {
         </div>
       )}
 
-      {!image ? (
-        <>
-          <DropZone
-            isDragging={isDragging}
-            setIsDragging={setIsDragging}
-            handleDrop={handleDrop}
-            handleFileSelect={handleFileSelect}
-            acceptedFileTypes="image/*,.dcm"
-            showToast={showToast}
-          />
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleInputChange} 
-            accept="image/*,.dcm" 
-            style={{ display: 'none' }} 
-          />
-          {apiStatus === 'error' && !toastMessage && (
-            <div className="api-error-banner">
-              <p>Image processing service is unavailable</p>
-              <button onClick={handleApiRetry} className="retry-button">
-                Retry Connection
-              </button>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="content-area" ref={contentRef}>
-          {apiError && (
-            <div className="api-error-message">
-              <p>Error: {apiError}</p>
-              {apiStatus === 'error' && (
+      <div className="app-content">
+        {!image && bulkImages.length === 0 ? (
+          <>
+            <DropZone
+              isDragging={isDragging}
+              setIsDragging={setIsDragging}
+              handleDrop={handleDrop}
+              handleFileSelect={handleFileSelect}
+              acceptedFileTypes="image/*,.dcm"
+              showToast={showToast}
+              multiple={FEATURES.ENABLE_BULK_UPLOAD}
+            />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleInputChange} 
+              accept="image/*,.dcm" 
+              style={{ display: 'none' }}
+              multiple={FEATURES.ENABLE_BULK_UPLOAD}
+            />
+            {apiStatus === 'error' && !toastMessage && (
+              <div className="api-error-banner">
+                <p>Image processing service is unavailable</p>
                 <button onClick={handleApiRetry} className="retry-button">
                   Retry Connection
                 </button>
-              )}
-            </div>
-          )}
-          
-          <ImagePreview
-            image={image}
-            redactedImage={redactedImage}
-            isProcessing={isProcessing}
-            redactionCount={redactionCount}
-          />
-
-          <div className="content-summary">
-            {redactedImage && (
-              <div className="redaction-summary">
-                <div className="redaction-summary-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                </div>
-                
-                <p>Redaction complete using the <span className="redaction-method">{redactionMethod === "blur" ? "Blur" : "Black Box"}</span> method. Please verify the result, as not all sensitive data can be automatically detected.</p>
-
-                {redactionCount > 0 ? (
-                  <div className="redaction-count">
-                    <span className="redaction-count-value">{redactionCount}</span> 
-                    {redactionCount === 1 ? 'item' : 'items'} redacted
-                  </div>
-                ) : (
-                  <p className="redaction-count no-items-message">No items detected for redaction</p>
-                )}
-                
-                <button 
-                  className="link-button" 
-                  onClick={openSettings}
-                  aria-label="Customize settings"
-                >
-                  Customize settings
-                </button>
               </div>
             )}
-          </div>
+          </>
+        ) : bulkImages.length > 0 ? (
+          <BulkImageGallery />
+        ) : (
+          <div className="content-area" ref={contentRef}>
+            {apiError && (
+              <div className="api-error-message">
+                <p>Error: {apiError}</p>
+                {apiStatus === 'error' && (
+                  <button onClick={handleApiRetry} className="retry-button">
+                    Retry Connection
+                  </button>
+                )}
+              </div>
+            )}
+            
+            <ImagePreview
+              image={image}
+              redactedImage={redactedImage}
+              isProcessing={isProcessing}
+              redactionCount={redactionCount}
+            />
 
-          <ActionButtons
-            handleNewImage={handleNewImage}
-            exportImage={exportImage}
-            redactedImage={redactedImage}
-            isProcessing={isProcessing}
-          />
-        </div>
-      )}
+            <div className="content-summary">
+              {redactedImage && (
+                <div className="redaction-summary">
+                  <div className="redaction-summary-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  </div>
+                  
+                  <p>Redaction complete using the <span className="redaction-method">{redactionMethod === "blur" ? "Blur" : "Black Box"}</span> method. Please verify the result, as not all sensitive data can be automatically detected.</p>
+
+                  {redactionCount > 0 ? (
+                    <div className="redaction-count">
+                      <span className="redaction-count-value">{redactionCount}</span> 
+                      {redactionCount === 1 ? 'item' : 'items'} redacted
+                    </div>
+                  ) : (
+                    <p className="redaction-count no-items-message">No items detected for redaction</p>
+                  )}
+                  
+                  <button 
+                    className="link-button" 
+                    onClick={openSettings}
+                    aria-label="Customize settings"
+                  >
+                    Customize settings
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <ActionButtons
+              handleNewImage={handleNewImage}
+              exportImage={exportImage}
+              redactedImage={redactedImage}
+              isProcessing={isProcessing}
+            />
+          </div>
+        )}
+      </div>
 
       <Footer />
 

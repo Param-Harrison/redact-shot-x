@@ -1,4 +1,5 @@
 import React from 'react';
+import { FEATURES } from '../constants';
 
 interface DropZoneProps {
   isDragging: boolean;
@@ -7,6 +8,7 @@ interface DropZoneProps {
   handleFileSelect: () => void;
   acceptedFileTypes?: string;
   showToast?: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  multiple?: boolean;
 }
 
 const DropZone: React.FC<DropZoneProps> = ({ 
@@ -15,26 +17,49 @@ const DropZone: React.FC<DropZoneProps> = ({
   handleDrop, 
   handleFileSelect,
   acceptedFileTypes = "image/*,.dcm",
-  showToast
+  showToast,
+  multiple = FEATURES.ENABLE_BULK_UPLOAD, // Default to the feature flag
 }) => {
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      
-      if (isFileTypeAccepted(file)) {
-        handleDrop(e);
-      } else {
-        e.stopPropagation();
-        if (showToast) {
-          showToast('Only image files are supported', 'error');
-        } else {
-          // Fallback to alert if no toast function is provided
-          alert('Only image files are supported');
+      // For multiple files, check if all files are valid
+      if (multiple && e.dataTransfer.files.length > 1) {
+        const allFiles = Array.from(e.dataTransfer.files);
+        const validFiles = allFiles.filter(file => isFileTypeAccepted(file));
+        
+        if (validFiles.length === 0) {
+          e.stopPropagation();
+          if (showToast) {
+            showToast('No valid image files found', 'error');
+          }
+          return;
+        }
+        
+        if (validFiles.length < allFiles.length) {
+          if (showToast) {
+            showToast(`${allFiles.length - validFiles.length} non-image files were filtered out`, 'info');
+          }
+        }
+      } 
+      // For single file, just check the first one
+      else {
+        const file = e.dataTransfer.files[0];
+        if (!isFileTypeAccepted(file)) {
+          e.stopPropagation();
+          if (showToast) {
+            showToast('Only image files are supported', 'error');
+          } else {
+            alert('Only image files are supported');
+          }
+          return;
         }
       }
+      
+      // Proceed with the drop handler
+      handleDrop(e);
     }
   };
   
@@ -74,6 +99,7 @@ const DropZone: React.FC<DropZoneProps> = ({
       onDrop={onDrop}
       onClick={handleFileSelect}
       data-accepted-files={acceptedFileTypes}
+      data-multiple={multiple}
     >
       <div className="drop-content">
         <div className="drop-icon">
@@ -82,7 +108,7 @@ const DropZone: React.FC<DropZoneProps> = ({
             <path d="M3 15V16C3 17.6569 4.34315 19 6 19H18C19.6569 19 21 17.6569 21 16V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         </div>
-        <h3>Drag & drop image here</h3>
+        <h3>Drag & drop {multiple ? 'images' : 'image'} here</h3>
         <p>or click anywhere to browse files</p>
         <button 
           className="primary-button upload-button" 
@@ -99,6 +125,16 @@ const DropZone: React.FC<DropZoneProps> = ({
         </button>
         <p className="small">You can also paste images from clipboard (Ctrl+V)</p>
         <p className="small">Supports PNG, JPG, JPEG, WebP, TIFF, and DICOM (.dcm) formats</p>
+        {multiple && (
+          <div className="feature-badge">
+            <span className="premium-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+              Premium: Bulk Upload Enabled
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -33,6 +33,7 @@ export type EnabledTypesRecord = {
   CUSTOM_REGEX: boolean;
   DENY_LIST: boolean;
   ALLOW_LIST: boolean;
+  BULK_UPLOAD: boolean;
   [key: string]: boolean;
 };
 
@@ -78,13 +79,15 @@ export interface SettingsModalProps {
 const SettingItem = ({ 
   title, 
   description, 
-  children 
+  children,
+  className
 }: { 
-  title: string, 
+  title: React.ReactNode, 
   description: string, 
-  children: React.ReactNode 
+  children: React.ReactNode,
+  className?: string
 }) => (
-  <div className="setting-item">
+  <div className={`setting-item ${className || ''}`}>
     <div className="setting-item-text">
       <h3>{title}</h3>
       <p>{description}</p>
@@ -193,6 +196,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="settings-modal-content">
           <div className="settings-panel">
             <div className="redaction-settings">
+              <h3 className="settings-section-title">Premium Features</h3>
+              
+              <SettingItem
+                title={<>Bulk Image Upload <span className="premium-badge"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>Premium</span></>} 
+                description="Enable uploading and processing multiple images at once"
+                className="premium"
+              >
+                <label className="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    checked={enabledTypes.BULK_UPLOAD || false}
+                    onChange={() => toggleRedactionType('BULK_UPLOAD')}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </SettingItem>
+              
               <h3 className="settings-section-title">Custom Rules</h3>
               
               {/* Custom Regex */}

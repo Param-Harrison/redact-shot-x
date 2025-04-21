@@ -2,14 +2,25 @@ import { API_URL, log } from '../constants';
 import pythonApi from '../python_api';
 
 /**
- * Check if the API server is running
+ * Check API status
  */
-export const checkApiStatus = async (): Promise<boolean> => {
+export const checkApiStatus = async () => {
   try {
-    return await pythonApi.ready();
+    const response = await fetch(`${API_URL}/health`, {
+      method: 'GET',
+    });
+    
+    return { 
+      ok: response.ok,
+      status: response.status 
+    };
   } catch (error) {
-    log('Error checking API status:', error);
-    return false;
+    log('API status check failed:', error);
+    return { 
+      ok: false, 
+      status: 0,
+      error 
+    };
   }
 };
 
@@ -44,6 +55,40 @@ export const processImage = async (imageData: string, config: any) => {
     return await response.json();
   } catch (error) {
     log('Error in processImage:', error);
+    throw error;
+  }
+};
+
+/**
+ * Process multiple images in bulk
+ */
+export const processBulkImages = async (files: File[], config: any) => {
+  try {
+    log(`Processing ${files.length} images in bulk`);
+    
+    // Create form data with files and config
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+    
+    // Add redaction configuration
+    formData.append('config_json', JSON.stringify(config));
+    
+    // Make API call
+    const response = await fetch(`${API_URL}/redact/bulk-upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to process images');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    log('Error in processBulkImages:', error);
     throw error;
   }
 };
