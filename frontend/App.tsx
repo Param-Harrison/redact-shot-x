@@ -562,12 +562,17 @@ function App() {
         const link = document.createElement('a');
         link.href = blobUrl;
         link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
         
-        // Clean up object URL
-        URL.revokeObjectURL(blobUrl);
+        // Temporarily append to body, click, and remove
+        document.body.appendChild(link);
+        setTimeout(() => { // Small delay to ensure the browser processes the download attribute
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            // Clean up object URL
+            URL.revokeObjectURL(blobUrl);
+          }, 100);
+        }, 0);
       } catch (error) {
         console.error("Error exporting image:", error);
         alert("Failed to export image. Please try again.");
@@ -804,12 +809,17 @@ function App() {
         const link = document.createElement('a');
         link.href = blobUrl;
         link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
         
-        // Clean up object URL
-        URL.revokeObjectURL(blobUrl);
+        // Temporarily append to body, click, and remove
+        document.body.appendChild(link);
+        setTimeout(() => { // Small delay to ensure the browser processes the download attribute
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            // Clean up object URL
+            URL.revokeObjectURL(blobUrl);
+          }, 100);
+        }, 0);
       } catch (error) {
         console.error("Error exporting image:", error);
         showToast("Failed to export image. Please try again.", "error");
@@ -826,9 +836,15 @@ function App() {
       // Show toast with download progress
       showToast(`Downloading ${successImages.length} images...`, 'info');
       
-      // Process each image sequentially to avoid browser issues
-      for (const img of successImages) {
+      // Process each image sequentially with a delay to avoid browser issues
+      for (let i = 0; i < successImages.length; i++) {
+        const img = successImages[i];
         await downloadImage(img);
+        
+        // Add a short delay between downloads for browser to process
+        if (i < successImages.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300)); 
+        }
       }
       
       showToast(`Downloaded ${successImages.length} images successfully`, 'success');
@@ -948,11 +964,17 @@ function App() {
           <div 
             className="image-preview-modal"
             onClick={() => setSelectedImage(null)}
+            onKeyDown={(e) => e.key === 'Escape' && setSelectedImage(null)}
+            tabIndex={0} // Make it focusable to receive keyboard events
+            role="dialog"
+            aria-modal="true"
+            aria-label="Image preview"
           >
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <button 
                 className="close-button"
                 onClick={() => setSelectedImage(null)}
+                aria-label="Close preview"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -960,6 +982,7 @@ function App() {
                 </svg>
               </button>
               <img src={selectedImage} alt="Preview" />
+              <div className="preview-instructions">Click anywhere outside or press ESC to close</div>
             </div>
           </div>
         )}

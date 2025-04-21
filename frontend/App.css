@@ -3413,3 +3413,73 @@ body, .app-container, .settings-modal-content {
   }
 }
 
+/* Modal improvements */
+.preview-instructions {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  margin: 0 auto;
+  width: fit-content;
+  pointer-events: none;
+}
+
+.dark-mode .preview-instructions {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.image-preview-modal .close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+.dark-mode .image-preview-modal .close-button {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.image-preview-modal .close-button:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.dark-mode .image-preview-modal .close-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.image-preview-modal .close-button svg {
+  color: white;
+  width: 24px;
+  height: 24px;
+}
+
+/* Fix download button styling to make it more obvious it's for download */
+.item-actions .primary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.item-actions .primary-button svg {
+  width: 16px;
+  height: 16px;
+}
+
