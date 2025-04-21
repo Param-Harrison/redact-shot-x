@@ -7,12 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-from redactor import ImageRedactor
+from .redactor import ImageRedactor
 import uvicorn
 
 # Constants
 PORT_API = 8004
-HOST_API = "0.0.0.0"
+HOST_API = "127.0.0.1"  # Use localhost for improved security
 
 # App instance
 app = FastAPI(title="RedactShotX API", version="0.1.0")
@@ -95,6 +95,7 @@ async def redact_base64_image(request: Base64Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Only run directly in development
 if __name__ == "__main__":
     logger.info(f"🚀 RedactShotX API running at {HOST_API}:{PORT_API}")
-    uvicorn.run(app, host=HOST_API, port=PORT_API)
+    uvicorn.run(app, host=HOST_API, port=PORT_API) 

@@ -298,3 +298,99 @@ The tech stack is intentionally left open to allow platform-specific optimizatio
 - In production, the executable is bundled with the Tauri app
 - The sidecar starts automatically when the app starts and shuts down when the app closes
 - Communication between the frontend and sidecar happens via HTTP
+
+# RedactShotX
+
+A desktop application for redacting sensitive information from screenshots and images. Built with React, Python, and pywebview.
+
+## Features
+
+- Redact PII and sensitive information from images
+- Multiple redaction methods (blur or black box)
+- Custom redaction rules and patterns
+- Cross-platform (Windows, macOS, Linux)
+
+## Development Setup
+
+### Prerequisites
+
+- Python 3.8+
+- Node.js 18+
+- pip and npm
+
+### Quick Start
+
+The simplest way to start the application in development mode:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/redact-shot-x.git
+cd redact-shot-x
+
+# Run the development script
+./run-dev.sh
+```
+
+This will set up the Python virtual environment, install all dependencies, and start both the frontend development server and the pywebview application.
+
+### Manual Setup
+
+If you prefer to set things up manually:
+
+1. Set up Python environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+pip install -e ./backend
+pip install pywebview requests
+python -m spacy download en_core_web_trf
+```
+
+2. Install frontend dependencies:
+
+```bash
+npm install
+```
+
+3. Start development servers:
+
+```bash
+# Start the Vite development server (in one terminal)
+npm run dev
+
+# Start the pywebview app (in another terminal)
+python main.py --debug
+```
+
+## Build for Distribution
+
+To build a distributable package:
+
+```bash
+python build.py
+```
+
+This will:
+
+1. Build the React frontend
+2. Create a PyInstaller package including the frontend and Python backend
+3. Output the result to the `dist` directory
+
+### Platform-Specific Notes
+
+For Windows, you may need to install GTK, WebKit, or other dependencies depending on your pywebview backend. Refer to the [pywebview documentation](https://pywebview.flowrl.com/guide/installation.html) for details.
+
+## Project Structure
+
+- `/frontend` - React frontend code
+- `/backend` - Python backend code
+- `/dist-web` - Built frontend (after running `npm run build`)
+- `/dist` - Built distributable package (after running `python build.py`)
+- `main.py` - pywebview application entry point
+- `run-dev.sh` - Development startup script
+- `build.py` - Build script for creating distributable packages
+
+## License
+
+MIT

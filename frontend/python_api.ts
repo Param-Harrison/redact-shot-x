@@ -1,7 +1,7 @@
-// Python API client for communicating with the Python sidecar backend
+// Python API client for communicating with the Python backend
 
 const port = 8004;
-const base_url = `http://localhost:${port}`;
+const base_url = `http://127.0.0.1:${port}`;
 
 class PythonApi {
   /**
@@ -21,17 +21,20 @@ class PythonApi {
 
   /**
    * Shut down the Python API server
+   * The pywebview app will handle this automatically when closing
    */
   async shutdown() {
     try {
+      console.log("Shutting down Python API...");
       await fetch(`${base_url}/shutdown`, {
         method: 'GET',
         signal: AbortSignal.timeout(1000)
       });
       console.log("Python API shutdown initiated");
+      return true;
     } catch (error) {
       console.error("Error shutting down Python API:", error);
-      // We don't throw here since the app is shutting down anyway
+      return false;
     }
   }
 }

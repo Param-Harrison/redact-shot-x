@@ -2,11 +2,8 @@
  * Application constants and environment-specific settings
  */
 
-// Determine if we're running in Tauri or web environment
-export const isTauri = window.navigator.userAgent.includes('Tauri');
-
 // API configuration
-export const API_URL = 'http://0.0.0.0:8004'; // Use consistent localhost IP instead of domain name
+export const API_URL = 'http://127.0.0.1:8004'; // Use localhost IP for API connection
 
 // Feature flags
 export const FEATURES = {

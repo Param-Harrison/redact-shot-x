@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "redactshotx"
+version = "0.1.0"
+description = "RedactShotX - Image Redactor with Presidio"
+readme = "README.md"
+requires-python = ">=3.8"
+
+dependencies = [
+    "numpy>=2.0.0",
+    "spacy>=3.8.0",
+    "presidio-analyzer>=2.2.0",
+    "presidio-image-redactor>=0.0.56",
+    "Pillow>=11.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "python-multipart>=0.0.6",
+    "pytesseract>=0.3.10",
+    "pywebview>=4.4.0",
+    "requests>=2.30.0"
+]
+
+[project.scripts]
+redactshotx = "main:main"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+py-modules = ["__init__", "api", "redactor"] 

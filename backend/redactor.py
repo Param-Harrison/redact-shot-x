@@ -819,4 +819,4 @@ class ImageRedactor:
             except Exception as e:
                 logger.error(f"Error applying redaction: {str(e)}")
 
-        return redacted_image, all_results
+        return redacted_image, all_results 
