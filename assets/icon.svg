@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4DB6AC" />
+      <stop offset="100%" stop-color="#26A69A" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="5" stdDeviation="10" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  
+  <!-- Main rounded square background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGradient)" filter="url(#shadow)" />
+  
+  <!-- Document with redaction -->
+  <g transform="translate(86, 86) scale(0.67)">
+    <!-- Document frame with shadow -->
+    <rect x="96" y="96" width="320" height="320" rx="24" fill="white" filter="url(#shadow)" />
+    
+    <!-- Document content -->
+    <rect x="136" y="156" width="240" height="12" rx="6" fill="#E0E0E0" />
+    <rect x="136" y="186" width="180" height="12" rx="6" fill="#E0E0E0" />
+    <rect x="136" y="216" width="200" height="12" rx="6" fill="#E0E0E0" />
+    
+    <!-- Redaction bars -->
+    <rect x="136" y="246" width="240" height="24" rx="12" fill="#26A69A" opacity="0.95" />
+    <rect x="136" y="286" width="160" height="24" rx="12" fill="#26A69A" opacity="0.95" />
+    <rect x="156" y="326" width="200" height="24" rx="12" fill="#26A69A" opacity="0.95" />
+    
+    <!-- User profile image with redaction -->
+    <circle cx="316" cy="190" r="30" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="2" />
+    <rect x="286" y="180" width="60" height="24" rx="12" fill="#26A69A" opacity="0.95" />
+  </g>
+  
+  <!-- Privacy icon overlay -->
+  <g transform="translate(384, 384) scale(0.22)">
+    <circle cx="0" cy="0" r="100" fill="white" opacity="0.95" />
+    <path d="M0 -80 L-60 -20 L-20 -20 L-20 60 L20 60 L20 -20 L60 -20 Z" fill="#26A69A" />
+  </g>
+</svg> 

@@ -7,31 +7,18 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "web": "vite --config vite.web.config.ts",
-    "build:web": "tsc && vite build --config vite.web.config.ts",
-    "build:sidecar-windows": "bash scripts/build-sidecar.sh windows",
-    "build:sidecar-mac": "bash scripts/build-sidecar.sh mac-apple",
-    "build:sidecar-mac-intel": "bash scripts/build-sidecar.sh mac-intel",
-    "build:sidecar-linux": "bash scripts/build-sidecar.sh linux",
-    "build:sidecar": "bash scripts/build-sidecar.sh",
-    "build:sidecar-all": "pnpm build:sidecar-windows && pnpm build:sidecar-mac && pnpm build:sidecar-mac-intel && pnpm build:sidecar-linux",
-    "tauri:dev": "pnpm build:sidecar-mac && pnpm tauri dev",
-    "tauri:build": "pnpm build:sidecar-all && pnpm tauri build"
+    "start": "bash run-dev.sh",
+    "build:all": "python3 build.py"
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-shell": "^2.2.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3",
-    "@tauri-apps/cli": "^2"
+    "vite": "^6.0.3"
   }
 }

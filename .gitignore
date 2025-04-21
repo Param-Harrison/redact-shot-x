@@ -41,6 +41,7 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -59,3 +60,29 @@ src-python/spacy/en_core_web_sm/**
 # But keep the folder
 !src-python/spacy/en_core_web_trf/.keep
 !src-python/spacy/en_core_web_sm/.keep
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Build outputs
+dist/
+dist-web/
+*.spec
+
+# Operating System
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
