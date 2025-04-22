@@ -8,7 +8,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "start": "bash run-dev.sh",
-    "build:all": "python3 build.py"
+    "build:mac": "python build.py --target mac",
+    "build:linux": "bash scripts/build-linux.sh",
+    "build:win": "bash scripts/build-win.sh",
+    "build:all": "npm run build && npm run build:mac && npm run build:linux && npm run build:win"
   },
   "dependencies": {
     "react": "^18.3.1",
