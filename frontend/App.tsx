@@ -529,10 +529,6 @@ function App() {
         // For base64 images, convert to blob for download
         const base64Data = redactedImage.split(';base64,').pop() || '';
         const mimeType = redactedImage.split(';')[0].split(':')[1];
-        const blob = await fetch(`data:${mimeType};base64,${base64Data}`).then(res => res.blob());
-        
-        // Create object URL for the blob
-        const blobUrl = URL.createObjectURL(blob);
         
         // Generate the output filename with "-redacted" suffix
         const generateRedactedFilename = (original: string) => {
@@ -558,24 +554,71 @@ function App() {
         // Generate the filename
         const fileName = generateRedactedFilename(originalFileName);
         
-        // Create link and trigger download
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
+        // Check if we're running in pywebview
+        if (typeof window !== 'undefined' && 'pywebview' in window) {
+          // Using pywebview API to save file
+          try {
+            // @ts-ignore - TypeScript doesn't know about pywebview
+            window.pywebview.api.save_file({
+              filename: fileName,
+              data: base64Data,
+              mimeType: mimeType
+            }).then((result: any) => {
+              if (result && result.success) {
+                showToast("File saved successfully", "success");
+              } else {
+                showToast("Failed to save file", "error");
+              }
+            }).catch((error: any) => {
+              console.error("Error saving file via pywebview:", error);
+              fallbackDownload();
+            });
+          } catch (error) {
+            console.error("Error calling pywebview API:", error);
+            fallbackDownload();
+          }
+        } else {
+          // Standard browser download as fallback
+          fallbackDownload();
+        }
         
-        // Temporarily append to body, click, and remove
-        document.body.appendChild(link);
-        setTimeout(() => { // Small delay to ensure the browser processes the download attribute
-          link.click();
+        // Fallback to browser download method
+        function fallbackDownload() {
+          // Convert base64 to blob without using Buffer
+          const byteCharacters = atob(base64Data);
+          const byteArrays: Uint8Array[] = [];
+          
+          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+            const slice = byteCharacters.slice(offset, offset + 512);
+            
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          
+          const blob = new Blob(byteArrays, { type: mimeType });
+          const blobUrl = URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          
+          document.body.appendChild(link);
           setTimeout(() => {
-            document.body.removeChild(link);
-            // Clean up object URL
-            URL.revokeObjectURL(blobUrl);
-          }, 100);
-        }, 0);
+            link.click();
+            setTimeout(() => {
+              document.body.removeChild(link);
+              URL.revokeObjectURL(blobUrl);
+            }, 100);
+          }, 0);
+        }
       } catch (error) {
         console.error("Error exporting image:", error);
-        alert("Failed to export image. Please try again.");
+        showToast("Failed to export image. Please try again.", "error");
       }
     }
   };
@@ -776,10 +819,6 @@ function App() {
         // For base64 images, convert to blob for download
         const base64Data = img.result.redactedImage.split(';base64,').pop() || '';
         const mimeType = img.result.redactedImage.split(';')[0].split(':')[1];
-        const blob = await fetch(`data:${mimeType};base64,${base64Data}`).then(res => res.blob());
-        
-        // Create object URL for the blob
-        const blobUrl = URL.createObjectURL(blob);
         
         // Generate the output filename with "-redacted" suffix
         const generateRedactedFilename = (original: string) => {
@@ -805,21 +844,68 @@ function App() {
         // Generate the filename
         const fileName = generateRedactedFilename(img.file.name);
         
-        // Create link and trigger download
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
+        // Check if we're running in pywebview
+        if (typeof window !== 'undefined' && 'pywebview' in window) {
+          // Using pywebview API to save file
+          try {
+            // @ts-ignore - TypeScript doesn't know about pywebview
+            window.pywebview.api.save_file({
+              filename: fileName,
+              data: base64Data,
+              mimeType: mimeType
+            }).then((result: any) => {
+              if (result && result.success) {
+                showToast("File saved successfully", "success");
+              } else {
+                showToast("Failed to save file", "error");
+              }
+            }).catch((error: any) => {
+              console.error("Error saving file via pywebview:", error);
+              showToast("Error saving file", "error");
+            });
+          } catch (error) {
+            console.error("Error calling pywebview API:", error);
+            fallbackDownload();
+          }
+        } else {
+          // Standard browser download as fallback
+          fallbackDownload();
+        }
         
-        // Temporarily append to body, click, and remove
-        document.body.appendChild(link);
-        setTimeout(() => { // Small delay to ensure the browser processes the download attribute
-          link.click();
+        // Fallback to browser download method
+        function fallbackDownload() {
+          // Convert base64 to blob without using Buffer
+          const byteCharacters = atob(base64Data);
+          const byteArrays: Uint8Array[] = [];
+          
+          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+            const slice = byteCharacters.slice(offset, offset + 512);
+            
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          
+          const blob = new Blob(byteArrays, { type: mimeType });
+          const blobUrl = URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          
+          document.body.appendChild(link);
           setTimeout(() => {
-            document.body.removeChild(link);
-            // Clean up object URL
-            URL.revokeObjectURL(blobUrl);
-          }, 100);
-        }, 0);
+            link.click();
+            setTimeout(() => {
+              document.body.removeChild(link);
+              URL.revokeObjectURL(blobUrl);
+            }, 100);
+          }, 0);
+        }
       } catch (error) {
         console.error("Error exporting image:", error);
         showToast("Failed to export image. Please try again.", "error");
@@ -836,18 +922,63 @@ function App() {
       // Show toast with download progress
       showToast(`Downloading ${successImages.length} images...`, 'info');
       
-      // Process each image sequentially with a delay to avoid browser issues
-      for (let i = 0; i < successImages.length; i++) {
-        const img = successImages[i];
-        await downloadImage(img);
-        
-        // Add a short delay between downloads for browser to process
-        if (i < successImages.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 300)); 
+      // Check if we're running in pywebview
+      if (typeof window !== 'undefined' && 'pywebview' in window) {
+        try {
+          // Prepare the data for bulk download
+          const files = successImages.map(img => {
+            const base64Data = img.result.redactedImage.split(';base64,').pop() || '';
+            const mimeType = img.result.redactedImage.split(';')[0].split(':')[1];
+            
+            // Generate filename
+            const lastDotIndex = img.file.name.lastIndexOf('.');
+            const name = lastDotIndex === -1 ? img.file.name : img.file.name.substring(0, lastDotIndex);
+            const extension = lastDotIndex === -1 ? '' : img.file.name.substring(lastDotIndex + 1);
+            const fileName = name.endsWith('-redacted') ? img.file.name : `${name}-redacted.${extension}`;
+            
+            return {
+              filename: fileName,
+              data: base64Data,
+              mimeType: mimeType
+            };
+          });
+          
+          // @ts-ignore - TypeScript doesn't know about pywebview
+          window.pywebview.api.save_files(files).then((result: any) => {
+            if (result && result.success) {
+              showToast(`Downloaded ${result.count || successImages.length} images successfully`, 'success');
+            } else {
+              showToast("Failed to save some files", "error");
+            }
+          }).catch((error: any) => {
+            console.error("Error saving files via pywebview:", error);
+            showToast("Error saving files", "error");
+          });
+        } catch (error) {
+          console.error("Error calling pywebview API:", error);
+          // Fall back to processing each image separately
+          processImagesSequentially();
         }
+      } else {
+        // Standard browser download as fallback
+        processImagesSequentially();
       }
       
-      showToast(`Downloaded ${successImages.length} images successfully`, 'success');
+      // Helper function to process images one by one
+      async function processImagesSequentially() {
+        // Process each image sequentially with a delay to avoid browser issues
+        for (let i = 0; i < successImages.length; i++) {
+          const img = successImages[i];
+          await downloadImage(img);
+          
+          // Add a short delay between downloads for browser to process
+          if (i < successImages.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300)); 
+          }
+        }
+        
+        showToast(`Downloaded ${successImages.length} images successfully`, 'success');
+      }
     };
     
     const clearGallery = () => {
