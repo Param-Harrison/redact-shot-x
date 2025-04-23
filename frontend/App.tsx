@@ -89,6 +89,8 @@ function App() {
   const [originalFileName, setOriginalFileName] = useState<string>("redacted-image");
   const [bulkImages, setBulkImages] = useState<{file: File, processed: boolean, result?: any}[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState<boolean>(false);
+  const [manualBlurMask, setManualBlurMask] = useState<string | null>(null);
+  const [brushSize, setBrushSize] = useState<number>(20);
 
   // Enhanced viewport handling for orientation changes
   useEffect(() => {
@@ -370,111 +372,212 @@ function App() {
 
   // Process image with redaction
   const processImage = async (imageData: string) => {
-    // If image data is null, show error
-    if (!imageData) {
-      showToast('No image data to process', 'error');
+    if (!imageData) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      // Check if we have a valid API URL
+      if (!API_URL) {
+        throw new Error("API URL is not configured");
+      }
+      
+      // Reset any previous redaction outputs
+      setRedactedImage(null);
+      setRedactionCount(0);
+      
+      // Create configuration object for the API
+      const config = {
+        redactionMethod,
+        enabledTypes,
+        allowListTags,
+        denyListTags,
+        customRegexes,
+        partialMatch: true, // Default to partial matching for allow/deny lists
+      };
+
+      // Process the image via API
+      const response = await processImageApi(imageData, config);
+  
+      // Handle the response
+      if (response.success) {
+        setRedactedImage(response.redactedImage);
+        setRedactionCount(response.redactionCount || 0);
+        
+        // Apply manual blur if it exists
+        if (manualBlurMask) {
+          applyManualBlur(response.redactedImage, manualBlurMask, brushSize);
+        }
+        
+        showToast(`Successfully redacted ${response.redactionCount} elements`, 'success');
+      } else {
+        setApiError(response.error || "Unknown error occurred");
+        showToast("Failed to process image", 'error');
+      }
+    } catch (error: any) {
+      console.error("Error processing image:", error);
+      setApiError(error.message || "Failed to process image");
+      showToast("Error processing image", 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle manual blur application
+  const handleManualBlur = (blurMask: string, size: number) => {
+    setManualBlurMask(blurMask);
+    setBrushSize(size);
+    
+    // If blurMask is empty string, it means we're clearing the blur
+    if (blurMask === '') {
+      // If we have a redacted image, reset to the original redacted version without manual blur
+      if (redactedImage) {
+        // Show a toast notification confirming the manual blur was cleared
+        showToast('Manual blur cleared', 'success');
+      }
       return;
     }
     
-    setIsProcessing(true);
-    setApiError(null);
-    setRedactedImage(null);
+    // If we already have a redacted image, apply the blur immediately
+    if (redactedImage && blurMask) {
+      applyManualBlur(redactedImage, blurMask, size);
+    }
+  };
 
-    try {
-      // Check API status before processing
-      if (apiStatus === 'error') {
-        throw new Error('The image processing service is unavailable. Please try again later.');
-      }
+  // Apply manual blur to the image
+  const applyManualBlur = (imageData: string, maskData: string, maskSize: number) => {
+    if (!imageData || !maskData) return;
+    
+    // Log that manual blur is being applied for debugging
+    console.log("Applying manual blur with brush size:", maskSize);
+    
+    // Create new canvases for blending
+    const canvas = document.createElement('canvas');
+    const maskCanvas = document.createElement('canvas');
+    const targetImg = new Image();
+    const maskImg = new Image();
+    
+    // When target image is loaded
+    targetImg.onload = () => {
+      canvas.width = targetImg.width;
+      canvas.height = targetImg.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       
-      // Create a local copy to avoid keeping reference to the original string
-      // which might be referenced in the upper scope
-      const imageDataCopy = imageData;
+      if (!ctx) return;
       
-      // Log size of data for debugging
-      console.log(`Processing image of size: ${(imageDataCopy.length / 1024).toFixed(2)}KB`);
+      // Draw the target image to the canvas
+      ctx.drawImage(targetImg, 0, 0);
       
-      // Call our unified API service that handles both web and Tauri environments
-      const result = await processImageApi(imageDataCopy, {
-        // Which PII types to detect and redact
-        enabledTypes: enabledTypes,
-        // Allow list (terms to preserve)
-        allowListTags: enabledTypes.ALLOW_LIST ? allowListTags : [],
-        // Deny list (terms to always redact)
-        denyListTags: enabledTypes.DENY_LIST ? denyListTags : [],
-        // Custom regex patterns
-        customRegexes: enabledTypes.CUSTOM_REGEX ? customRegexes : [],
-        // Add the partial matching setting
-        partialMatch: true,
-        // Redaction method
-        redactionMethod: "blur"
-      });
-      
-      // Clear references to large data before React re-renders
-      // This helps free memory immediately rather than waiting for GC
-      const resultImageData = result.redactedImage;
-      let resultRedactionCount = 0;
-      
-      if (result.success) {
-        // Clear old redacted image if it exists
-        if (redactedImage) {
-          URL.revokeObjectURL(redactedImage.startsWith('blob:') ? redactedImage : '');
-        }
+      // When mask image is loaded
+      maskImg.onload = () => {
+        // Set mask canvas dimensions
+        maskCanvas.width = targetImg.width;
+        maskCanvas.height = targetImg.height;
+        const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
         
-        resultRedactionCount = result.redactionCount;
+        if (!maskCtx) return;
         
-        // Update state with the result
-        setRedactedImage(resultImageData);
-        setRedactionCount(resultRedactionCount);
-      } else {
-        console.error("Error processing image:", result.error);
+        // Draw the mask to its canvas and scale it to match the target image
+        maskCtx.drawImage(maskImg, 0, 0, targetImg.width, targetImg.height);
         
-        // Handle specific error cases
-        const errorMsg = result.error || '';
-        if (errorMsg.includes("cannot identify image file")) {
-          setApiError("This file appears to be an unsupported or corrupted image format. Please try a different image or convert it to a common format like PNG or JPG.");
-          showToast("Unsupported or corrupted image format", "error");
-        } else {
-          setApiError(errorMsg || 'An error occurred while processing the image');
-        }
-      }
-    } catch (error) {
-      console.error("Error processing image:", error);
-      
-      // Handle specific error messages
-      const errorMsg = error instanceof Error ? error.message : 'Unable to process the image';
-      if (errorMsg.includes("cannot identify image file")) {
-        setApiError("This file appears to be an unsupported or corrupted image format. Please try a different image or convert it to a common format like PNG or JPG.");
-        showToast("Unsupported or corrupted image format", "error");
-      } else {
-        setApiError(errorMsg);
-      }
-      
-      setApiStatus('error'); // Mark API as having an error if processing fails
-    } finally {
-      setIsProcessing(false);
-      
-      // Force garbage collection through reference removal
-      // The imageData parameter will be cleaned up by the API service
-      try {
-        // In browser environments, we rely on JavaScript's garbage collection
-        // We've already cleaned up references which is the best we can do
+        // Get mask data
+        const maskImgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+        const maskPixels = maskImgData.data;
         
-        // Allow a moment for React to finish rendering before
-        // suggesting garbage collection to the browser
-        setTimeout(() => {
-          // This sets empty string to any dangling references
-          // and suggests to browser it's a good time for GC
-          if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-            // @ts-ignore - TypeScript might not know requestIdleCallback
-            window.requestIdleCallback(() => {
-              console.log("Suggesting cleanup to browser");
-            });
+        // Keep track of blurred regions
+        const processedRegions = new Set<string>();
+        
+        // Apply blur to areas where mask has been drawn
+        for (let y = 0; y < canvas.height; y += 5) { // Process every 5th pixel for efficiency
+          for (let x = 0; x < canvas.width; x += 5) {
+            // Check if this pixel has a mask (non-transparent)
+            const maskIndex = (y * maskCanvas.width + x) * 4;
+            const maskAlpha = maskPixels[maskIndex + 3];
+            
+            // If the mask has some opacity at this pixel - reduced threshold to 1 to detect lighter strokes
+            if (maskAlpha > 1) {
+              // Create a region id to avoid processing the same region multiple times
+              const regionId = `${Math.floor(x/maskSize)},${Math.floor(y/maskSize)}`;
+              
+              if (!processedRegions.has(regionId)) {
+                processedRegions.add(regionId);
+                applyBlurToRegion(ctx, x, y, maskSize);
+              }
+            }
           }
-        }, 100);
-      } catch (e) {
-        console.log("Error during cleanup:", e);
+        }
+        
+        // Update the redacted image with the manually blurred version
+        setRedactedImage(canvas.toDataURL('image/jpeg', 0.95));
+        
+        // Show a toast notification confirming the manual blur was applied
+        showToast('Manual blur applied', 'success');
+        
+        // Clean up
+        canvas.width = 0;
+        canvas.height = 0;
+        maskCanvas.width = 0;
+        maskCanvas.height = 0;
+      };
+      
+      maskImg.src = maskData;
+    };
+    
+    targetImg.src = imageData;
+  };
+
+  // Helper function to apply a blur effect to a specific region
+  const applyBlurToRegion = (
+    ctx: CanvasRenderingContext2D, 
+    centerX: number, 
+    centerY: number, 
+    radius: number
+  ) => {
+    // Get the region to blur
+    const startX = Math.max(0, centerX - radius);
+    const startY = Math.max(0, centerY - radius);
+    const endX = Math.min(ctx.canvas.width, centerX + radius);
+    const endY = Math.min(ctx.canvas.height, centerY + radius);
+    const width = endX - startX;
+    const height = endY - startY;
+    
+    // Skip if dimensions are invalid
+    if (width <= 0 || height <= 0) return;
+    
+    // Get image data for the region
+    const imageData = ctx.getImageData(startX, startY, width, height);
+    
+    // Apply a box blur (simple and efficient)
+    const iterations = 8; // Increased from 4 to 8 for stronger blur effect
+    for (let iter = 0; iter < iterations; iter++) {
+      const pixels = imageData.data;
+      const tempPixels = new Uint8ClampedArray(pixels);
+      
+      // Skip the edges to simplify the algorithm
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const idx = (y * width + x) * 4;
+          
+          // Compute average of neighboring pixels (box blur kernel)
+          for (let c = 0; c < 3; c++) { // RGB channels only
+            pixels[idx + c] = Math.floor(
+              (tempPixels[idx - width * 4 - 4 + c] +
+               tempPixels[idx - width * 4 + c] +
+               tempPixels[idx - width * 4 + 4 + c] +
+               tempPixels[idx - 4 + c] +
+               tempPixels[idx + c] +
+               tempPixels[idx + 4 + c] +
+               tempPixels[idx + width * 4 - 4 + c] +
+               tempPixels[idx + width * 4 + c] +
+               tempPixels[idx + width * 4 + 4 + c]) / 9
+            );
+          }
+        }
       }
     }
+    
+    // Put the processed image data back
+    ctx.putImageData(imageData, startX, startY);
   };
 
   // Handle file selection via button
@@ -1221,6 +1324,7 @@ function App() {
               redactedImage={redactedImage}
               isProcessing={isProcessing}
               redactionCount={redactionCount}
+              onApplyBlur={handleManualBlur}
             />
 
             <div className="content-summary">

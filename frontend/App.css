@@ -468,20 +468,19 @@ html, body {
   width: 100%;
 }
 
+/* Enhance the image-preview positioning */
 .image-preview {
   position: relative;
-  flex: 1;
+  margin: 0 auto;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #f5f5f7;
+  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f9fafc;
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 1.5rem;
-  min-height: 250px;
-  max-height: 80vh;
-  width: 100%;
 }
 
 .image-preview img {
@@ -1680,6 +1679,7 @@ button {
   background-color: rgba(16, 185, 129, 0.04);
   border-radius: var(--border-radius);
   padding: 1.25rem;
+  margin-top: 1rem;
   text-align: center;
   width: 100%;
   box-shadow: var(--shadow-sm);
@@ -3480,10 +3480,6 @@ body, .app-container, .settings-modal-content {
 
 /* Modal improvements */
 .preview-instructions {
-  position: absolute;
-  bottom: 16px;
-  left: 0;
-  right: 0;
   text-align: center;
   background-color: rgba(0, 0, 0, 0.6);
   color: white;
@@ -3614,6 +3610,733 @@ body, .app-container, .settings-modal-content {
     max-width: 640px;
     width: 100%;
   }
+}
+
+/* Manual Blur Tool Styles */
+.manual-blur-tool {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.manual-blur-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #f5f5f7;
+  border-radius: 8px;
+}
+
+.dark-mode .manual-blur-controls {
+  background-color: #1e293b;
+}
+
+.manual-blur-toggle {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.manual-blur-toggle.active {
+  background-color: #e53935;
+}
+
+.manual-blur-toggle:hover {
+  background-color: #4361ee;
+}
+
+.manual-blur-toggle.active:hover {
+  background-color: #c62828;
+}
+
+.brush-size-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+
+.brush-size-control label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.dark-mode .brush-size-control label {
+  color: var(--text-light);
+}
+
+.brush-size-control input[type="range"] {
+  flex-grow: 1;
+  max-width: 200px;
+  height: 6px;
+  background-color: #ddd;
+  border-radius: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.brush-size-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.brush-size-control input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  cursor: pointer;
+  border: none;
+}
+
+.brush-size-control span {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  min-width: 35px;
+  text-align: right;
+}
+
+.dark-mode .brush-size-control span {
+  color: var(--text-light);
+}
+
+.blur-brush-container {
+  position: relative;
+  width: 100%;
+  min-height: 100px;
+}
+
+.blur-brush-canvas {
+  cursor: crosshair;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.clear-brush-button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.clear-brush-button:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.dark-mode .clear-brush-button {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .clear-brush-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+  .manual-blur-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .brush-size-control {
+    width: 100%;
+  }
+  
+  .brush-size-control input[type="range"] {
+    max-width: none;
+  }
+  
+  .manual-blur-toggle {
+    width: 100%;
+  }
+}
+
+/* Image Tools Styling */
+.image-tools-container {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.image-tools {
+  display: flex;
+  gap: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.tool-button {
+  width: 36px;
+  height: 36px;
+}
+
+.tool-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tool-settings {
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 8px;
+  width: 220px;
+  animation: fadeIn 0.2s ease forwards;
+}
+
+.tool-settings .brush-size-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-settings label {
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tool-settings input[type="range"] {
+  flex-grow: 1;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.tool-settings input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: white;
+  cursor: pointer;
+}
+
+.tool-settings input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: white;
+  cursor: pointer;
+  border: none;
+}
+
+.tool-settings span {
+  color: white;
+  font-size: 12px;
+  min-width: 30px;
+  text-align: right;
+}
+
+/* Dark mode styles */
+.dark-mode .image-tools {
+  background-color: rgba(30, 41, 59, 0.9);
+}
+
+.dark-mode .tool-settings {
+  background-color: rgba(30, 41, 59, 0.9);
+}
+
+.dark-mode .tool-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Make blur brush canvas fit perfectly within the image preview */
+.blur-brush-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .image-tools-container {
+    bottom: 10px;
+    left: 10px;
+  }
+  
+  .tool-settings {
+    width: calc(100vw - 40px);
+    max-width: 300px;
+  }
+  
+  .tool-button {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Original manual blur tool styles can be kept for backward compatibility */
+.manual-blur-tool {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.manual-blur-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #f5f5f7;
+  border-radius: 8px;
+}
+
+.dark-mode .manual-blur-controls {
+  background-color: #1e293b;
+}
+
+.manual-blur-toggle {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.manual-blur-toggle.active {
+  background-color: #e53935;
+}
+
+.manual-blur-toggle:hover {
+  background-color: #4361ee;
+}
+
+.manual-blur-toggle.active:hover {
+  background-color: #c62828;
+}
+
+.brush-size-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+
+.brush-size-control label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.dark-mode .brush-size-control label {
+  color: var(--text-light);
+}
+
+.brush-size-control input[type="range"] {
+  flex-grow: 1;
+  max-width: 200px;
+  height: 6px;
+  background-color: #ddd;
+  border-radius: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.brush-size-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.brush-size-control input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  cursor: pointer;
+  border: none;
+}
+
+.brush-size-control span {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  min-width: 35px;
+  text-align: right;
+}
+
+.dark-mode .brush-size-control span {
+  color: var(--text-light);
+}
+
+.clear-brush-button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.clear-brush-button:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.dark-mode .clear-brush-button {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .clear-brush-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+  .manual-blur-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .brush-size-control {
+    width: 100%;
+  }
+  
+  .brush-size-control input[type="range"] {
+    max-width: none;
+  }
+  
+  .manual-blur-toggle {
+    width: 100%;
+  }
+}
+
+/* Enhance the image-preview positioning */
+.image-preview {
+  position: relative;
+  margin: 0 auto;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #f5f5f7;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure overlay doesn't prevent tool interaction */
+.preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+  z-index: 4; /* Lower z-index so tools can be on top */
+}
+
+/* Fix positioning for image tools */
+.image-tools-container {
+  position: absolute;
+  bottom: 15px;
+  left: 15px;
+  z-index: 25; /* Higher z-index to ensure visibility */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: auto; /* Ensure clickable */
+}
+
+.image-tools {
+  display: flex;
+  gap: 8px;
+  background-color: rgba(0, 0, 0, 0.8); /* Darker for better visibility */
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.tool-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tool-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.tool-button.active {
+  background-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.tool-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.tool-settings {
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 12px;
+  border-radius: 8px;
+  width: 240px;
+  animation: fadeIn 0.2s ease forwards;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Improve blur brush container positioning */
+.blur-brush-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 15; /* Higher than preview overlay but lower than tools */
+  pointer-events: auto;
+}
+
+.blur-brush-canvas {
+  cursor: crosshair;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Enhance clear brush button */
+.clear-brush-button {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 20; /* Ensure it's clickable */
+}
+
+.clear-brush-button:hover {
+  background-color: rgba(0, 0, 0, 0.9);
+  transform: translateY(-1px);
+}
+
+.dark-mode .clear-brush-button {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.dark-mode .clear-brush-button:hover {
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Tool instructions and intro */
+.tool-instructions {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 8px;
+  text-align: center;
+}
+
+.tool-intro {
+  position: absolute;
+  bottom: 70px;
+  left: 20px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-size: 14px;
+  animation: fadeInUp 0.5s ease-out;
+  z-index: 26;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  max-width: 220px;
+}
+
+.tool-intro-arrow {
+  font-size: 24px;
+  position: absolute;
+  bottom: -15px;
+  left: 15px;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .tool-intro {
+  background-color: rgba(30, 41, 59, 0.9);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure image preview has correct dimensions */
+.image-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
+  vertical-align: middle;
+  pointer-events: none; /* Prevent issues with canvas overlay */
+}
+
+/* Modal Image Container (for supporting blur brush in modal) */
+.modal-image-container {
+  position: relative;
+  max-width: 100%;
+  max-height: 85vh;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-image-container img {
+  display: block;
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  pointer-events: none; /* Prevent issues with canvas overlay */
+}
+
+/* Image tools in modal */
+.image-tools-container.in-modal {
+  bottom: 25px;
+  left: 25px;
+  z-index: 1050; /* Higher z-index in modal */
+}
+
+/* Update modal content positioning */
+.image-preview-modal .modal-content {
+  position: relative;
+  background-color: transparent;
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* Update modal close button */
+.image-preview-modal .close-button {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  z-index: 1060; /* Above tools */
+}
+
+/* Ensure preview instructions are positioned correctly */
+.preview-instructions {
+  margin-top: 15px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Mobile optimizations for modal tools */
+@media (max-width: 768px) {
+  .image-tools-container.in-modal {
+    bottom: 15px;
+    left: 15px;
+  }
+  
+  .modal-image-container {
+    max-height: 75vh;
+  }
+  
+  .modal-image-container img {
+    max-height: 75vh;
+  }
+}
+
+/* Blur brush container in modal */
+.blur-brush-container.in-modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1040; /* Higher than normal but below tools */
+}
+
+/* Ensure modal respects cursor changes */
+.image-preview-modal .modal-content.using-tool {
+  cursor: crosshair;
+}
+
+/* Improve modal content structure for tools */
+.image-preview-modal .modal-content {
+  overflow: visible; /* Allow tool panels to overflow */
+}
+
+/* Ensure clear button in the modal is properly positioned */
+.blur-brush-container.in-modal .clear-brush-button {
+  top: 20px;
+  right: 20px;
+  z-index: 1055; /* Higher than other elements */
 }
 
 
