@@ -4287,7 +4287,8 @@ body, .app-container, .settings-modal-content {
 
 /* Ensure preview instructions are positioned correctly */
 .preview-instructions {
-  margin-top: 15px;
+  position: absolute;
+  bottom: 30px;
   background-color: rgba(0, 0, 0, 0.6);
   color: white;
   padding: 8px 16px;

@@ -18,7 +18,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
 }) => {
   const [showFullImage, setShowFullImage] = useState<boolean>(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [brushSize, setBrushSize] = useState<number>(20);
+  const [brushSize, setBrushSize] = useState<number>(28);
   const [toolIntroShown, setToolIntroShown] = useState<boolean>(false);
   
   // Show a visual intro for the tool on first render

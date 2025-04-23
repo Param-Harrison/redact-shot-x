@@ -548,7 +548,7 @@ function App() {
     const imageData = ctx.getImageData(startX, startY, width, height);
     
     // Apply a box blur (simple and efficient)
-    const iterations = 8; // Increased from 4 to 8 for stronger blur effect
+    const iterations = 12;
     for (let iter = 0; iter < iterations; iter++) {
       const pixels = imageData.data;
       const tempPixels = new Uint8ClampedArray(pixels);

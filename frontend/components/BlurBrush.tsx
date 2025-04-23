@@ -10,7 +10,7 @@ interface BlurBrushProps {
 const BlurBrush: React.FC<BlurBrushProps> = ({ 
   sourceImage, 
   onApplyBlur, 
-  brushSize = 20,
+  brushSize = 28,
   active 
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
