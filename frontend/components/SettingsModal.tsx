@@ -41,8 +41,8 @@ export interface SettingsModalProps {
   isOpen: boolean;
   closeSettings: () => void;
   // Redaction settings
-  redactionMethod: "blur" | "box";
-  setRedactionMethod: (method: "blur" | "box") => void;
+  redactionMethod?: "blur" | "box";
+  setRedactionMethod?: (method: "blur" | "box") => void;
   enabledTypes: EnabledTypesRecord;
   toggleRedactionType: (type: keyof EnabledTypesRecord) => void;
   
@@ -70,9 +70,13 @@ export interface SettingsModalProps {
   addCustomRegex?: () => void;
   removeCustomRegex?: (regex: string) => void;
   handleCustomRegexKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  setCustomRegexes: (val: string[]) => void;
+  setCustomRegexes?: (val: string[]) => void;
   
+  // App settings
   darkMode?: boolean;
+  toggleDarkMode?: () => void;
+  usePartialMatching?: boolean;
+  setUsePartialMatching?: (value: boolean) => void;
 }
 
 // Setting Item component for consistent layout
@@ -124,7 +128,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   addCustomRegex,
   removeCustomRegex,
   handleCustomRegexKeyPress,
-  darkMode = false
+  darkMode = false,
 }) => {
   const [toastVisible, setToastVisible] = useState(false);
   

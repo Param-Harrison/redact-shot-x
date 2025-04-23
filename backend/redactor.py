@@ -352,15 +352,26 @@ class ImageRedactor:
     def _sanitize_regex_pattern(self, pattern):
         """Sanitize regex pattern by removing strict anchors and making it more flexible for image text."""
         try:
-            # Remove beginning and end anchors
-            pattern = pattern.replace("^", "")
-            pattern = pattern.replace("$", "")
+            # Check if the pattern already has regex special characters
+            has_regex_special_chars = any(c in pattern for c in r".*+?()[]{}|^$\\")
 
-            # Remove word boundaries if already present (we'll add our own)
-            pattern = pattern.replace("\\b", "")
+            if has_regex_special_chars:
+                # It's already a regex pattern, just remove beginning and end anchors
+                pattern = pattern.replace("^", "")
+                pattern = pattern.replace("$", "")
 
-            # Add word boundary if not already present
-            pattern = "\\b" + pattern + "\\b"
+                # Remove word boundaries if already present (we'll add our own)
+                pattern = pattern.replace("\\b", "")
+
+                # Add word boundary if not already present
+                pattern = "\\b" + pattern + "\\b"
+            else:
+                # It's a simple string, treat it as a partial match pattern
+                # Escape special regex characters
+                pattern = re.escape(pattern)
+
+                # Don't add word boundaries to allow partial matches
+                # This is the key change for partial matching
 
             # Special case for purely numeric patterns (like 1050)
             if re.match(r"^\\b\d+\\b$", pattern):
@@ -460,7 +471,7 @@ class ImageRedactor:
             ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
 
         redacted_image, results = self._blur_redact(
-            image, ad_hoc_recognizers, allow_list, custom_regexes
+            image, ad_hoc_recognizers, allow_list, custom_regexes, config
         )
 
         # Generate output filename with proper handling to avoid double -redacted suffix
@@ -578,7 +589,7 @@ class ImageRedactor:
                 )
             else:  # Default to blur method
                 redacted_img, redaction_results = self._blur_redact(
-                    image, ad_hoc_recognizers, allow_list, custom_regexes
+                    image, ad_hoc_recognizers, allow_list, custom_regexes, config
                 )
 
             # Count redactions applied
@@ -622,16 +633,65 @@ class ImageRedactor:
                 redacted_base64 = None
             gc.collect()
 
+    def _is_match(self, text, pattern, partial_match=True):
+        """Helper method for consistent matching between allow and deny lists.
+
+        Args:
+            text: The text to check for matches
+            pattern: The pattern to match against
+            partial_match: Whether to allow partial matching (substring) or require exact matching
+
+        Returns:
+            bool: True if there's a match, False otherwise
+        """
+        if not text or not pattern:
+            return False
+
+        text = text.lower().strip()
+        pattern = pattern.lower().strip()
+
+        if partial_match:
+            # Substring matching - pattern is anywhere in the text
+            return pattern in text
+        else:
+            # Exact matching - pattern equals the entire text
+            return pattern == text
+
     def _blur_redact(
         self,
         image: Image.Image,
         ad_hoc_recognizers=None,
         allow_list=None,
         custom_regexes=None,
+        config=None,
     ):
+        # Default to partial matching if not specified in config
+        partial_match = True
+        if config and "partialMatch" in config:
+            partial_match = config.get("partialMatch", True)
+            logger.info(
+                f"Using {'partial' if partial_match else 'exact'} matching mode"
+            )
+
         # First, let's extract text from the image for allow list and custom regex handling
         extracted_text_dict = None
         has_pytesseract = False
+
+        # Get deny list from ad_hoc_recognizers if available
+        deny_list = []
+        for recognizer in ad_hoc_recognizers or []:
+            if (
+                hasattr(recognizer, "supported_entity")
+                and recognizer.supported_entity == "DENY_LIST"
+            ):
+                if hasattr(recognizer, "deny_list"):
+                    deny_list = recognizer.deny_list
+                    logger.info(
+                        f"Using deny list with {len(deny_list)} items for custom matching"
+                    )
+
+        # Store matched deny list text blocks
+        deny_list_matches = []
 
         try:
             import pytesseract
@@ -643,6 +703,40 @@ class ImageRedactor:
             logger.info(
                 f"Extracted {len(extracted_text_dict['text'])} text blocks from image"
             )
+
+            # Apply deny list with partial matching support if we have text extraction
+            if deny_list and len(deny_list) > 0:
+                for i, text in enumerate(extracted_text_dict["text"]):
+                    text = text.strip()
+                    if not text:
+                        continue
+
+                    # Extract text block information
+                    left = extracted_text_dict["left"][i]
+                    top = extracted_text_dict["top"][i]
+                    width = extracted_text_dict["width"][i]
+                    height = extracted_text_dict["height"][i]
+
+                    # Check if this text matches any deny list entry
+                    for denied in deny_list:
+                        if self._is_match(text, denied, partial_match=partial_match):
+                            logger.info(
+                                f"Deny list match: '{denied}' matched in '{text}'"
+                            )
+
+                            # Create a result object for redaction
+                            class DenyListRedactionResult:
+                                def __init__(self, left, top, width, height):
+                                    self.left = left
+                                    self.top = top
+                                    self.width = width
+                                    self.height = height
+                                    self.entity_type = "DENY_LIST"
+
+                            result = DenyListRedactionResult(left, top, width, height)
+                            deny_list_matches.append(result)
+                            break  # Move to next text block after finding a match
+
         except (ImportError, Exception) as e:
             logger.warning(f"Could not use pytesseract for text extraction: {str(e)}")
 
@@ -765,14 +859,18 @@ class ImageRedactor:
                         ):
                             # Check if this text matches any allow list entry
                             for allowed in allow_list:
-                                if allowed.lower() in text.lower():
+                                if self._is_match(
+                                    text, allowed, partial_match=partial_match
+                                ):
                                     should_redact = False
                                     allow_list_ignored += 1
                                     break
                 # Fallback to simpler checking if extract_text is not available
                 elif hasattr(res, "text") and res.text:
                     for allowed in allow_list:
-                        if allowed.lower() in res.text.lower():
+                        if self._is_match(
+                            res.text, allowed, partial_match=partial_match
+                        ):
                             should_redact = False
                             allow_list_ignored += 1
                             break
@@ -784,7 +882,7 @@ class ImageRedactor:
             logger.info(f"Filtered {allow_list_ignored} items based on allow list")
 
         # Combine filtered results with custom redactions
-        all_results = filtered_results + custom_redactions
+        all_results = filtered_results + custom_redactions + deny_list_matches
 
         # Process and apply redactions
         for res in all_results:
@@ -819,4 +917,4 @@ class ImageRedactor:
             except Exception as e:
                 logger.error(f"Error applying redaction: {str(e)}")
 
-        return redacted_image, all_results 
+        return redacted_image, all_results

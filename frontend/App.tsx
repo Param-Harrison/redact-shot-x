@@ -26,7 +26,6 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [redactedImage, setRedactedImage] = useState<string | null>(null);
-  const [redactionMethod, setRedactionMethod] = useState<"blur" | "box">("blur");
   const [redactionCount, setRedactionCount] = useState<number>(0);
   const [viewportHeight, setViewportHeight] = useState<number>(window.innerHeight);
   const [allowListTags, setAllowListTags] = useState<string[]>([]);
@@ -51,6 +50,7 @@ function App() {
     
     return prefersDarkMode;
   });
+  const redactionMethod = "blur"; // For now, we only support blur redaction
   
   // Create state for redaction settings
   const [enabledTypes, setEnabledTypes] = useState<EnabledTypesRecord>({
@@ -370,9 +370,16 @@ function App() {
 
   // Process image with redaction
   const processImage = async (imageData: string) => {
+    // If image data is null, show error
+    if (!imageData) {
+      showToast('No image data to process', 'error');
+      return;
+    }
+    
     setIsProcessing(true);
     setApiError(null);
-    
+    setRedactedImage(null);
+
     try {
       // Check API status before processing
       if (apiStatus === 'error') {
@@ -386,17 +393,21 @@ function App() {
       // Log size of data for debugging
       console.log(`Processing image of size: ${(imageDataCopy.length / 1024).toFixed(2)}KB`);
       
-      // Create configuration object for Python backend
-      const config = {
-        enabledTypes,
-        redactionMethod,
-        allowListTags,
-        denyListTags,
-        customRegexes
-      };
-      
       // Call our unified API service that handles both web and Tauri environments
-      const result = await processImageApi(imageDataCopy, config);
+      const result = await processImageApi(imageDataCopy, {
+        // Which PII types to detect and redact
+        enabledTypes: enabledTypes,
+        // Allow list (terms to preserve)
+        allowListTags: enabledTypes.ALLOW_LIST ? allowListTags : [],
+        // Deny list (terms to always redact)
+        denyListTags: enabledTypes.DENY_LIST ? denyListTags : [],
+        // Custom regex patterns
+        customRegexes: enabledTypes.CUSTOM_REGEX ? customRegexes : [],
+        // Add the partial matching setting
+        partialMatch: true,
+        // Redaction method
+        redactionMethod: "blur"
+      });
       
       // Clear references to large data before React re-renders
       // This helps free memory immediately rather than waiting for GC
@@ -771,11 +782,12 @@ function App() {
       
       // Create config object with available state variables
       const config = {
-        redactionMethod: redactionMethod,
+        redactionMethod: "blur",
         enabledTypes: enabledTypes,
         customRegexes: customRegexes,
         allowListTags: allowListTags,
-        denyListTags: denyListTags
+        denyListTags: denyListTags,
+        partialMatch: true
       };
       
       // Use the API service
@@ -1255,11 +1267,9 @@ function App() {
 
       <Footer />
 
-      <SettingsModal
+      <SettingsModal 
         isOpen={isSettingsOpen}
         closeSettings={closeSettings}
-        redactionMethod={redactionMethod}
-        setRedactionMethod={setRedactionMethod}
         enabledTypes={enabledTypes}
         toggleRedactionType={toggleRedactionType}
         allowListTags={allowListTags}
@@ -1283,7 +1293,6 @@ function App() {
         addCustomRegex={addCustomRegex}
         removeCustomRegex={removeCustomRegex}
         handleCustomRegexKeyPress={handleCustomRegexKeyPress}
-        setCustomRegexes={setCustomRegexes}
         darkMode={darkMode}
       />
     </main>

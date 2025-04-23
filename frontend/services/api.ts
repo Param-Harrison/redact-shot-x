@@ -1,5 +1,4 @@
 import { API_URL, log } from '../constants';
-import pythonApi from '../python_api';
 
 /**
  * Check API status
