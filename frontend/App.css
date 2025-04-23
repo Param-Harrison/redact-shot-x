@@ -192,6 +192,8 @@ html, body {
 .settings-button .icon-svg,
 .close-button .icon-svg {
   stroke: currentColor;
+  width: 22px; /* Consistent size */
+  height: 22px; /* Consistent size */
 }
 
 /* Settings button icon */
@@ -375,7 +377,9 @@ html, body {
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background-color: rgba(60, 185, 137, 0.1);
+  background-color: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -387,7 +391,7 @@ html, body {
 .drop-icon svg {
   width: 50%;
   height: 50%;
-  stroke: #3cb989;
+  stroke: var(--primary-color);
   stroke-width: 2;
   transition: all 0.2s ease;
 }
