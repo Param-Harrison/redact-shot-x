@@ -165,10 +165,6 @@ The built binaries will be in `src-tauri/target/release/bundle/`.
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## 🌟 Unique Value Proposition
 
 - Offline only, fully local (no cloud, no login)
@@ -393,4 +389,4 @@ For Windows, you may need to install GTK, WebKit, or other dependencies dependin
 
 ## License
 
-MIT
+Proprietary
