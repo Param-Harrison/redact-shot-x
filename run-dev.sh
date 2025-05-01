@@ -16,6 +16,12 @@ cleanup() {
     kill -TERM "$PID" 2>/dev/null || true
   fi
   
+  # Kill Vite process if it exists
+  if [ -n "$VITE_PID" ]; then
+    echo -e "${YELLOW}Stopping Vite (PID: $VITE_PID)${NC}"
+    kill -TERM "$VITE_PID" 2>/dev/null || true
+  fi
+  
   echo -e "${GREEN}✅ Cleanup complete${NC}"
   exit 0
 }
@@ -86,31 +92,62 @@ fi
     echo -e "${YELLOW}📦 Installing Node.js dependencies...${NC}"
     npm install
   fi
+
+  # Handle different modes
+  case "$1" in
+    "--build")
+      # Build and run using built files
+      echo -e "${GREEN}🏗 Building frontend...${NC}"
+      npm run build
+      
+      echo -e "${GREEN}🚀 Starting app with built files...${NC}"
+      python main.py --debug
+      PID=$!
+      ;;
+      
+    "--frontend-only")
+      # Start only the Vite frontend
+      echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"
+      npm run dev
+      ;;
+      
+    "--backend-only")
+      # Start only the Python backend
+      echo -e "${YELLOW}⚙ Starting Python backend...${NC}"
+      python main.py --debug
+      ;;
+      
+    *)
+      # Default: Start both the Vite dev server and the pywebview app
+      echo -e "${GREEN}🌐 Starting Vite frontend server...${NC}"
+      npm run dev &
+      VITE_PID=$!
+      
+      # Wait for Vite to start
+      echo -e "${YELLOW}⏳ Waiting for Vite to start...${NC}"
+      sleep 3
+      
+      # Check if Vite is running
+      if ! kill -0 $VITE_PID 2>/dev/null; then
+        echo -e "${RED}❌ Vite failed to start${NC}"
+        exit 1
+      fi
+      
+      # Start the pywebview app
+      echo -e "${GREEN}🚀 Starting pywebview app...${NC}"
+      python main.py --debug
+      PID=$!
+      
+      # Check if the app is running
+      if ! kill -0 $PID 2>/dev/null; then
+        echo -e "${RED}❌ Python app failed to start${NC}"
+        exit 1
+      fi
+      ;;
+  esac
   
-  # Start development processes
-  if [ "$1" == "--frontend-only" ]; then
-    # Start only the Vite frontend
-    echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"
-    npm run dev
-  elif [ "$1" == "--backend-only" ]; then
-    # Start only the Python backend
-    echo -e "${YELLOW}⚙ Starting Python backend...${NC}"
-    python main.py --debug
-  else
-    # Start both the Vite dev server and the pywebview app
-    echo -e "${GREEN}🌐 Starting Vite frontend server...${NC}"
-    npm run dev &
-    VITE_PID=$!
-    
-    # Wait for Vite to start
-    echo -e "${YELLOW}⏳ Waiting for Vite to start...${NC}"
-    sleep 3
-    
-    # Start the pywebview app
-    echo -e "${GREEN}🚀 Starting pywebview app...${NC}"
-    python main.py --debug
-    PID=$!
-    
+  # Wait for the main process if it exists
+  if [ -n "$PID" ]; then
     wait $PID
   fi
 )

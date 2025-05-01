@@ -32,7 +32,6 @@ WINDOW_HEIGHT = 800
 api_process = None
 window = None
 tray_icon = None
-tray_thread = None
 
 
 # JS API class for file operations
@@ -232,13 +231,14 @@ def shutdown_handler(signal, frame):
 
 
 def get_html_path():
-    """Get the path to the HTML file based on whether we're in development or production"""
-    if getattr(sys, "frozen", False):
-        # Running in a PyInstaller bundle - use the API server
-        return f"http://{API_HOST}:{API_PORT}/app/index.html"
-    else:
-        # In development, always use Vite
+    """Get the path to the HTML file based on the environment."""
+    if os.getenv("DEBUG"):
         return "http://localhost:3000"
+    else:
+        # Use the built files from dist-web
+        return os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "dist-web", "index.html"
+        )
 
 
 def get_icon_path():
@@ -337,40 +337,40 @@ def create_window():
 
 
 def run_tray_icon():
-    """Run the tray icon in the current thread"""
-    global tray_icon
+    """Run the tray icon in a separate thread."""
     try:
-        icon_path = get_icon_path()
-        if icon_path and os.path.exists(icon_path):
-            logger.info(f"Creating tray icon from: {icon_path}")
-            # Convert icon to PIL Image
-            icon_image = Image.open(icon_path)
+        # Create the tray icon
+        icon = pystray.Icon("redactshotx")
+        icon.icon = Image.open(ICON_PATH)
+        icon.title = "RedactShotX"
 
-            # Create menu
-            menu = Menu(MenuItem("Open", on_tray_open), MenuItem("Exit", on_tray_exit))
+        # Create menu items
+        def show_window():
+            window.show()
 
-            # Create tray icon
-            tray_icon = Icon("RedactShotX", icon_image, menu=menu)
-            logger.info("Starting tray icon")
-            tray_icon.run()
-        else:
-            logger.warning("Could not create tray icon: icon file not found")
+        def quit_app():
+            window.destroy()
+            icon.stop()
+            os._exit(0)
+
+        icon.menu = pystray.Menu(
+            pystray.MenuItem("Show", show_window), pystray.MenuItem("Quit", quit_app)
+        )
+
+        # Run the tray icon
+        icon.run()
     except Exception as e:
         logger.error(f"Error running tray icon: {str(e)}")
+        # Don't exit the app if tray icon fails
+        pass
 
 
 def main():
-    """Main entry point for the application"""
-    global api_process, tray_thread
-
-    # Register signal handlers
-    signal.signal(signal.SIGINT, shutdown_handler)
-    signal.signal(signal.SIGTERM, shutdown_handler)
-
+    """Main entry point for the application."""
     try:
-        # Start API server in a separate process
+        # Start API server
+        logger.info(f"Starting API server at {API_HOST}:{API_PORT}")
         api_process = Process(target=run_api_server)
-        api_process.daemon = True
         api_process.start()
 
         # Wait for API server to be ready
@@ -378,22 +378,50 @@ def main():
             logger.error("Failed to start API server")
             return
 
-        # Create the window
-        create_window()
+        # Get HTML path
+        html_path = get_html_path()
+        logger.info(f"Using HTML path: {html_path}")
 
-        # Start tray icon in a separate thread (cross-platform)
+        # Get icon path
+        icon_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "assets", "icon.icns"
+        )
+        logger.info(f"Using application icon: {icon_path}")
+
+        # Set webview settings
+        webview.settings["ALLOW_DOWNLOADS"] = True
+
+        # Create and start window
+        logger.info("Starting pywebview window")
+        window = webview.create_window(
+            "RedactShotX",
+            html_path,
+            width=1200,
+            height=800,
+            resizable=True,
+            min_size=(800, 600),
+            text_select=True,
+            confirm_close=True,
+        )
+
+        # Set the window icon if available
+        if os.path.exists(icon_path):
+            try:
+                window.set_icon(icon_path)
+            except Exception as e:
+                logger.warning(f"Could not set window icon: {str(e)}")
+
+        # Start tray icon in a separate thread
         logger.info("Starting tray icon thread")
         tray_thread = threading.Thread(target=run_tray_icon, daemon=True)
         tray_thread.start()
 
-        # Start the webview
-        webview.start(debug=True if "--debug" in sys.argv else False)
+        # Run the application
+        webview.start(debug=bool(os.getenv("DEBUG")))
 
     except Exception as e:
-        logger.error(f"Error starting application: {str(e)}")
-    finally:
-        # Clean up when window closes
-        cleanup()
+        logger.error(f"Error in main: {str(e)}")
+        raise
 
 
 if __name__ == "__main__":
