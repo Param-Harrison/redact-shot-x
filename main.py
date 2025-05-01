@@ -11,6 +11,8 @@ import platform
 import base64
 from multiprocessing import Process
 from pathlib import Path
+from PIL import Image
+from pystray import Icon, Menu, MenuItem
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,8 +28,11 @@ WINDOW_TITLE = "RedactShotX"
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 
-# Keep track of API process
+# Keep track of API process and window
 api_process = None
+window = None
+tray_icon = None
+tray_thread = None
 
 
 # JS API class for file operations
@@ -270,25 +275,28 @@ def get_icon_path():
     return str(icon_path) if icon_path.exists() else None
 
 
-def main():
-    """Main entry point for the application"""
-    global api_process
+def on_tray_open(icon, item):
+    """Handle tray icon open action"""
+    global window
+    logger.info("Opening window from tray icon")
+    if window and not window.visible:
+        window.show()
+    elif not window:
+        create_window()
 
-    # Register signal handlers
-    signal.signal(signal.SIGINT, shutdown_handler)
-    signal.signal(signal.SIGTERM, shutdown_handler)
 
-    try:
-        # Start API server in a separate process
-        api_process = Process(target=run_api_server)
-        api_process.daemon = True
-        api_process.start()
+def on_tray_exit(icon, item):
+    """Handle tray icon exit action"""
+    logger.info("Exiting application from tray icon")
+    cleanup()
+    icon.stop()
+    sys.exit(0)
 
-        # Wait for API server to be ready
-        if not wait_for_api():
-            logger.error("Failed to start API server")
-            return
 
+def create_window():
+    """Create and show the main window"""
+    global window
+    if not window:
         # Get the HTML path
         html_path = get_html_path()
         logger.info(f"Using HTML path: {html_path}")
@@ -306,9 +314,9 @@ def main():
         # Set webview settings to allow downloads
         webview.settings["ALLOW_DOWNLOADS"] = True
 
-        # Create and start the window
+        # Create the window
         logger.info("Starting pywebview window")
-        webview.create_window(
+        window = webview.create_window(
             title=WINDOW_TITLE,
             url=html_path,
             width=WINDOW_WIDTH,
@@ -316,8 +324,63 @@ def main():
             min_size=(800, 600),
             text_select=True,
             confirm_close=True,
-            js_api=file_api,  # Add the JS API instance
+            js_api=file_api,
         )
+    else:
+        window.show()
+
+
+def run_tray_icon():
+    """Run the tray icon in the current thread"""
+    global tray_icon
+    try:
+        icon_path = get_icon_path()
+        if icon_path and os.path.exists(icon_path):
+            logger.info(f"Creating tray icon from: {icon_path}")
+            # Convert icon to PIL Image
+            icon_image = Image.open(icon_path)
+
+            # Create menu
+            menu = Menu(MenuItem("Open", on_tray_open), MenuItem("Exit", on_tray_exit))
+
+            # Create tray icon
+            tray_icon = Icon("RedactShotX", icon_image, menu=menu)
+            logger.info("Starting tray icon")
+            tray_icon.run()
+        else:
+            logger.warning("Could not create tray icon: icon file not found")
+    except Exception as e:
+        logger.error(f"Error running tray icon: {str(e)}")
+
+
+def main():
+    """Main entry point for the application"""
+    global api_process, tray_thread
+
+    # Register signal handlers
+    signal.signal(signal.SIGINT, shutdown_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
+
+    try:
+        # Start API server in a separate process
+        api_process = Process(target=run_api_server)
+        api_process.daemon = True
+        api_process.start()
+
+        # Wait for API server to be ready
+        if not wait_for_api():
+            logger.error("Failed to start API server")
+            return
+
+        # Create the window
+        create_window()
+
+        # Start tray icon in a separate thread (cross-platform)
+        logger.info("Starting tray icon thread")
+        tray_thread = threading.Thread(target=run_tray_icon, daemon=True)
+        tray_thread.start()
+
+        # Start the webview
         webview.start(debug=True if "--debug" in sys.argv else False)
 
     except Exception as e:

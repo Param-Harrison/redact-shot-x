@@ -73,7 +73,7 @@ fi
   echo -e "${YELLOW}📦 Installing Python dependencies...${NC}"
   pip install --upgrade pip setuptools wheel
   pip install -e ./backend
-  pip install pywebview requests
+  pip install pywebview requests pystray
   
   # Install spaCy model if needed
   if ! python -c "import spacy; spacy.load('en_core_web_trf')" 2>/dev/null; then
