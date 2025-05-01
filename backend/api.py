@@ -4,11 +4,13 @@ import gc
 import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from .redactor import ImageRedactor
 import uvicorn
+import sys
 
 # Constants
 PORT_API = 8004
@@ -25,6 +27,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files
+if getattr(sys, "frozen", False):
+    # Running in a PyInstaller bundle
+    base_path = os.path.dirname(sys.executable)
+    static_path = os.path.join(base_path, "dist-web")
+else:
+    # Running in development
+    static_path = "dist-web"
+
+if os.path.exists(static_path):
+    app.mount("/app", StaticFiles(directory=static_path, html=True), name="static")
+
 # Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
@@ -38,7 +52,8 @@ class Base64Request(BaseModel):
 
 @app.get("/")
 async def root():
-    return {"status": "active", "service": "RedactShotX API"}
+    """Redirect root to the frontend app"""
+    return RedirectResponse(url="/app/index.html")
 
 
 @app.get("/health")

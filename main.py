@@ -234,14 +234,8 @@ def shutdown_handler(signal, frame):
 def get_html_path():
     """Get the path to the HTML file based on whether we're in development or production"""
     if getattr(sys, "frozen", False):
-        # Running in a PyInstaller bundle
-        base_path = os.path.dirname(sys.executable)
-        html_path = os.path.join(base_path, "web", "index.html")
-        return (
-            f"file://{html_path}"
-            if os.path.exists(html_path)
-            else "http://localhost:3000"
-        )
+        # Running in a PyInstaller bundle - use the API server
+        return f"http://{API_HOST}:{API_PORT}/app/index.html"
     else:
         # In development, always use Vite
         return "http://localhost:3000"
