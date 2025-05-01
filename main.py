@@ -199,7 +199,7 @@ def wait_for_api():
 
 def cleanup():
     """Clean up resources before exit"""
-    global api_process
+    global api_process, window
 
     logger.info("Cleaning up resources...")
 
@@ -207,7 +207,7 @@ def cleanup():
     try:
         import requests
 
-        requests.get(f"http://{API_HOST}:{API_PORT}/shutdown")
+        requests.get(f"http://{API_HOST}:{API_PORT}/shutdown", timeout=1)
     except:
         pass
 
@@ -219,6 +219,13 @@ def cleanup():
         if api_process.is_alive():
             logger.info("Force killing API process...")
             api_process.kill()
+
+    # Close window if it exists
+    if window:
+        try:
+            window.destroy()
+        except:
+            pass
 
     logger.info("Cleanup complete")
 
@@ -367,10 +374,17 @@ def run_tray_icon():
 
 def main():
     """Main entry point for the application."""
+    global api_process, window
+
+    # Register signal handlers
+    signal.signal(signal.SIGINT, shutdown_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
+
     try:
         # Start API server
         logger.info(f"Starting API server at {API_HOST}:{API_PORT}")
         api_process = Process(target=run_api_server)
+        api_process.daemon = True  # Make it a daemon process
         api_process.start()
 
         # Wait for API server to be ready
@@ -422,6 +436,8 @@ def main():
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")
         raise
+    finally:
+        cleanup()
 
 
 if __name__ == "__main__":
