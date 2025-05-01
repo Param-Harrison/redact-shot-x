@@ -1,16 +1,68 @@
 import sys
 import PyInstaller.__main__
+import os
+import shutil
+import spacy
+from pathlib import Path
 
 APP_NAME = "RedactShotX"
 SPACY_MODEL = "en_core_web_trf"
 
 
+def ensure_spacy_model():
+    """Ensure the required spaCy model is downloaded and copied to the project root."""
+    try:
+        # Try to load the model to check if it exists
+        nlp = spacy.load(SPACY_MODEL)
+        print(f"✅ {SPACY_MODEL} model found")
+
+        # Get the model's location
+        model_path = Path(nlp.path)
+        target_path = Path(SPACY_MODEL)
+
+        # If the model is not in the project root, copy it there
+        if not target_path.exists():
+            print(f"⚠️ Copying {SPACY_MODEL} to project root...")
+            shutil.copytree(model_path, target_path)
+            print(f"✅ {SPACY_MODEL} copied to project root")
+    except OSError:
+        print(f"⚠️ {SPACY_MODEL} model not found. Downloading...")
+        spacy.cli.download(SPACY_MODEL)
+        print(f"✅ {SPACY_MODEL} model downloaded successfully")
+
+        # After download, load it again to get its path
+        nlp = spacy.load(SPACY_MODEL)
+        model_path = Path(nlp.path)
+        target_path = Path(SPACY_MODEL)
+
+        # Copy to project root
+        print(f"⚠️ Copying {SPACY_MODEL} to project root...")
+        shutil.copytree(model_path, target_path)
+        print(f"✅ {SPACY_MODEL} copied to project root")
+
+
 def build_mac():
+    ensure_spacy_model()
+
+    # Create runtime hook file first
+    with open("runtime_hook.py", "w") as f:
+        f.write(
+            """
+import os
+import sys
+
+if sys.platform == 'darwin':
+    # Add macOS frameworks to the path
+    frameworks_path = os.path.join(sys._MEIPASS, 'Frameworks')
+    if not os.path.exists(frameworks_path):
+        os.makedirs(frameworks_path)
+"""
+        )
+
     PyInstaller.__main__.run(
         [
             "main.py",
             f"--name={APP_NAME}",
-            "--onefile",
             "--windowed",
             "--icon=assets/icon.icns",
             f"--add-data={SPACY_MODEL}:{SPACY_MODEL}",
@@ -21,12 +73,15 @@ def build_mac():
             "--hidden-import=en_core_web_trf",
             "--hidden-import=pystray",
             "--hidden-import=PIL",
+            "--hidden-import=AppKit",
+            "--hidden-import=Foundation",
             "--collect-all=presidio_analyzer",
             "--collect-all=presidio_image_redactor",
             "--collect-all=spacy",
             "--collect-all=en_core_web_trf",
             "--collect-all=pystray",
             "--collect-all=PIL",
+            "--runtime-hook=runtime_hook.py",
         ]
     )
 

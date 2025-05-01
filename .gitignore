@@ -86,3 +86,11 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# SpaCy model content
+en_core_web_trf
+en_core_web_sm

@@ -159,7 +159,9 @@ def run_api_server():
     """Run the FastAPI server in a separate process"""
     try:
         logger.info(f"Starting API server at {API_HOST}:{API_PORT}")
-        uvicorn.run(api_app, host=API_HOST, port=API_PORT, log_level="info")
+        config = uvicorn.Config(api_app, host=API_HOST, port=API_PORT, log_level="info")
+        server = uvicorn.Server(config)
+        server.run()
     except Exception as e:
         logger.error(f"API server error: {str(e)}")
 
@@ -167,17 +169,27 @@ def run_api_server():
 def wait_for_api():
     """Wait for the API server to be ready"""
     import requests
+    import socket
 
     max_retries = 30
     retry_interval = 0.1
 
+    # First check if port is available
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((API_HOST, API_PORT))
+        sock.close()
+    except socket.error:
+        logger.error(f"Port {API_PORT} is already in use")
+        return False
+
     for i in range(max_retries):
         try:
-            response = requests.get(f"http://{API_HOST}:{API_PORT}/health")
+            response = requests.get(f"http://{API_HOST}:{API_PORT}/health", timeout=1)
             if response.status_code == 200:
                 logger.info("API server is ready!")
                 return True
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
             pass
 
         time.sleep(retry_interval)
