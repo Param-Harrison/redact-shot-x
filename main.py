@@ -6,56 +6,41 @@ import time
 import signal
 import webview
 import logging
-import uvicorn
 import platform
 import base64
-from multiprocessing import Process
+import json
+import gc
+import traceback
 from pathlib import Path
 from PIL import Image
 from pystray import Icon, Menu, MenuItem
+from backend.redactor import ImageRedactor
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG,  # Set to DEBUG for more detailed logs
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("redactshotx.log"), logging.StreamHandler()],
+)
 logger = logging.getLogger("redactshotx")
 
-# Import API after setting up logging
-from backend.api import app as api_app
-
 # Constants
-API_PORT = 8004
-API_HOST = "127.0.0.1"
 WINDOW_TITLE = "RedactShotX"
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 
-# Keep track of API process and window
-api_process = None
+# Keep track of window and tray icon
 window = None
 tray_icon = None
 
 
-# JS API class for file operations
-class FileAPI:
+# JS API class for file operations and redaction
+class RedactShotXAPI:
     def save_file(self, data):
-        """
-        Save a file using the system's native save dialog
-
-        Args:
-            data (dict): Dictionary containing:
-                - filename: Suggested filename
-                - data: Base64 encoded file data
-                - mimeType: MIME type of the file
-
-        Returns:
-            dict: Result of the save operation
-        """
+        """Save a file using the system's native save dialog"""
         try:
             logger.info(f"Saving file: {data.get('filename')}")
-
-            # Get the main window
             window = webview.windows[0]
-
-            # Show save dialog
             file_path = window.create_file_dialog(
                 webview.SAVE_DIALOG,
                 directory="~",
@@ -63,14 +48,10 @@ class FileAPI:
             )
 
             if not file_path:
-                # User cancelled the dialog
                 logger.info("Save cancelled by user")
                 return {"success": False, "message": "Operation cancelled by user"}
 
-            # Convert base64 to binary
             binary_data = base64.b64decode(data.get("data", ""))
-
-            # Write to file
             with open(file_path, "wb") as f:
                 f.write(binary_data)
 
@@ -79,59 +60,36 @@ class FileAPI:
 
         except Exception as e:
             logger.error(f"Error saving file: {str(e)}")
+            logger.error(traceback.format_exc())
             return {"success": False, "error": str(e)}
 
     def save_files(self, files):
-        """
-        Save multiple files using a directory selection dialog
-
-        Args:
-            files (list): List of dictionaries, each containing:
-                - filename: Suggested filename
-                - data: Base64 encoded file data
-                - mimeType: MIME type of the file
-
-        Returns:
-            dict: Result of the save operation
-        """
+        """Save multiple files using a directory selection dialog"""
         try:
             logger.info(f"Saving {len(files)} files")
-
-            # Get the main window
             window = webview.windows[0]
-
-            # Show directory selection dialog
             dir_path = window.create_file_dialog(webview.FOLDER_DIALOG, directory="~")
 
             if not dir_path:
-                # User cancelled the dialog
                 logger.info("Directory selection cancelled by user")
                 return {"success": False, "message": "Operation cancelled by user"}
 
-            # Make sure we have a string, not a tuple
             if isinstance(dir_path, tuple) and len(dir_path) > 0:
                 dir_path = dir_path[0]
 
             saved_count = 0
             errors = []
 
-            # Save each file
             for file_data in files:
                 try:
                     filename = file_data.get(
                         "filename", f"redacted-image-{saved_count + 1}.png"
                     )
                     file_path = os.path.join(dir_path, filename)
-
-                    # Convert base64 to binary
                     binary_data = base64.b64decode(file_data.get("data", ""))
-
-                    # Write to file
                     with open(file_path, "wb") as f:
                         f.write(binary_data)
-
                     saved_count += 1
-
                 except Exception as e:
                     logger.error(
                         f"Error saving file {file_data.get('filename')}: {str(e)}"
@@ -151,76 +109,144 @@ class FileAPI:
 
         except Exception as e:
             logger.error(f"Error in save_files: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {"success": False, "error": str(e)}
+
+    def redact_image(self, image_data, config=None):
+        """Redact an image using base64 data"""
+        try:
+            logger.info("Starting image redaction")
+            logger.debug(f"Config: {config}")
+
+            redactor = ImageRedactor()
+            result = redactor.redact_image_base64(image_data, config)
+
+            logger.info("Image redaction completed successfully")
+            return json.loads(result)
+        except Exception as e:
+            logger.error(f"Error redacting image: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {"success": False, "error": str(e)}
+
+    def redact_uploaded_image(self, file_data, config=None):
+        """Redact an uploaded image"""
+        try:
+            logger.info("Starting uploaded image redaction")
+            logger.debug(f"File data: {file_data.get('filename')}")
+            logger.debug(f"Config: {config}")
+
+            # Save the uploaded file temporarily
+            temp_path = f"temp_{file_data.get('filename', 'uploaded_image')}"
+            binary_data = base64.b64decode(file_data.get("data", ""))
+            with open(temp_path, "wb") as f:
+                f.write(binary_data)
+
+            # Process the image
+            redactor = ImageRedactor()
+            result = redactor.redact_image(temp_path, config)
+
+            # Clean up
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            gc.collect()
+
+            logger.info("Uploaded image redaction completed successfully")
+            return json.loads(result)
+        except Exception as e:
+            logger.error(f"Error processing uploaded image: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {"success": False, "error": str(e)}
+
+    def redact_bulk_upload(self, files_data, config=None):
+        """Redact multiple uploaded images"""
+        try:
+            logger.info(f"Starting bulk upload of {len(files_data)} files")
+            logger.debug(f"Config: {config}")
+
+            results = []
+            redactor = ImageRedactor()
+
+            for file_data in files_data:
+                try:
+                    # Skip non-image files
+                    filename = file_data.get("filename", "").lower()
+                    if not filename.endswith(
+                        (
+                            ".png",
+                            ".jpg",
+                            ".jpeg",
+                            ".gif",
+                            ".webp",
+                            ".tiff",
+                            ".tif",
+                            ".bmp",
+                            ".svg",
+                            ".dcm",
+                        )
+                    ):
+                        results.append(
+                            {
+                                "filename": file_data.get("filename"),
+                                "success": False,
+                                "error": "Not a supported image format",
+                            }
+                        )
+                        continue
+
+                    # Process the image
+                    temp_path = f"temp_{file_data.get('filename')}"
+                    binary_data = base64.b64decode(file_data.get("data", ""))
+                    with open(temp_path, "wb") as f:
+                        f.write(binary_data)
+
+                    result = redactor.redact_image(temp_path, config)
+                    result_json = json.loads(result)
+                    result_json["filename"] = file_data.get("filename")
+
+                    # Clean up temp file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+
+                    results.append(result_json)
+
+                except Exception as e:
+                    logger.error(
+                        f"Error processing file {file_data.get('filename')}: {str(e)}"
+                    )
+                    logger.error(traceback.format_exc())
+                    results.append(
+                        {
+                            "filename": file_data.get("filename"),
+                            "success": False,
+                            "error": str(e),
+                        }
+                    )
+
+            gc.collect()
+            logger.info("Bulk upload processing completed")
+            return {"results": results}
+
+        except Exception as e:
+            logger.error(f"Error in bulk upload processing: {str(e)}")
+            logger.error(traceback.format_exc())
             return {"success": False, "error": str(e)}
 
 
-def run_api_server():
-    """Run the FastAPI server in a separate process"""
-    try:
-        logger.info(f"Starting API server at {API_HOST}:{API_PORT}")
-        config = uvicorn.Config(api_app, host=API_HOST, port=API_PORT, log_level="info")
-        server = uvicorn.Server(config)
-        server.run()
-    except Exception as e:
-        logger.error(f"API server error: {str(e)}")
-
-
-def wait_for_api():
-    """Wait for the API server to be ready"""
-    import requests
-    import socket
-
-    max_retries = 30
-    retry_interval = 0.1
-
-    # First check if port is available
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.bind((API_HOST, API_PORT))
-        sock.close()
-    except socket.error:
-        logger.error(f"Port {API_PORT} is already in use")
-        return False
-
-    for i in range(max_retries):
-        try:
-            response = requests.get(f"http://{API_HOST}:{API_PORT}/health", timeout=1)
-            if response.status_code == 200:
-                logger.info("API server is ready!")
-                return True
-        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-            pass
-
-        time.sleep(retry_interval)
-
-    logger.error("Timeout waiting for API server")
-    return False
+def get_html_path():
+    """Get the path to the HTML file based on the environment."""
+    if os.getenv("DEBUG"):
+        return "http://localhost:3000"
+    else:
+        return os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "dist-web", "index.html"
+        )
 
 
 def cleanup():
     """Clean up resources before exit"""
-    global api_process, window
-
+    global window
     logger.info("Cleaning up resources...")
 
-    # Try to gracefully shutdown API
-    try:
-        import requests
-
-        requests.get(f"http://{API_HOST}:{API_PORT}/shutdown", timeout=1)
-    except:
-        pass
-
-    # Terminate API process if running
-    if api_process and api_process.is_alive():
-        logger.info("Terminating API process...")
-        api_process.terminate()
-        api_process.join(timeout=2)
-        if api_process.is_alive():
-            logger.info("Force killing API process...")
-            api_process.kill()
-
-    # Close window if it exists
     if window:
         try:
             window.destroy()
@@ -237,15 +263,62 @@ def shutdown_handler(signal, frame):
     sys.exit(0)
 
 
-def get_html_path():
-    """Get the path to the HTML file based on the environment."""
-    if os.getenv("DEBUG"):
-        return "http://localhost:3000"
-    else:
-        # Use the built files from dist-web
-        return os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "dist-web", "index.html"
+def on_tray_open(icon, item):
+    """Handle tray icon open action"""
+    global window
+    if window:
+        window.show()
+        window.restore()
+
+
+def on_tray_exit(icon, item):
+    """Handle tray icon exit action"""
+    icon.stop()
+    cleanup()
+    sys.exit(0)
+
+
+def create_window():
+    """Create the main window"""
+    global window
+    html_path = get_html_path()
+
+    # Enable debugging in webview
+    webview.settings["ALLOW_DOWNLOADS"] = True
+
+    # Create the API instance
+    api = RedactShotXAPI()
+    logger.info("Created RedactShotXAPI instance")
+
+    window = webview.create_window(
+        WINDOW_TITLE,
+        html_path,
+        width=WINDOW_WIDTH,
+        height=WINDOW_HEIGHT,
+        js_api=api,
+        resizable=True,
+        min_size=(800, 600),
+    )
+
+    # Add a small delay to ensure the window is ready
+    time.sleep(0.5)
+
+    # Verify API is exposed
+    try:
+        window.evaluate_js(
+            """
+            if (window.pywebview && window.pywebview.api) {
+                console.log('API is available');
+            } else {
+                console.error('API is not available');
+            }
+        """
         )
+    except Exception as e:
+        logger.error(f"Error verifying API exposure: {str(e)}")
+        logger.error(traceback.format_exc())
+
+    logger.info("Window created with API exposed")
 
 
 def get_icon_path():
@@ -288,156 +361,79 @@ def get_icon_path():
     return str(icon_path) if icon_path.exists() else None
 
 
-def on_tray_open(icon, item):
-    """Handle tray icon open action"""
-    global window
-    logger.info("Opening window from tray icon")
-    if window and not window.visible:
-        window.show()
-    elif not window:
-        create_window()
-
-
-def on_tray_exit(icon, item):
-    """Handle tray icon exit action"""
-    logger.info("Exiting application from tray icon")
-    cleanup()
-    icon.stop()
-    sys.exit(0)
-
-
-def create_window():
-    """Create and show the main window"""
-    global window
-    if not window:
-        # Get the HTML path
-        html_path = get_html_path()
-        logger.info(f"Using HTML path: {html_path}")
-
+def run_tray_icon():
+    """Run the system tray icon"""
+    global tray_icon
+    try:
         # Get the icon path
         icon_path = get_icon_path()
-        if icon_path:
-            logger.info(f"Using application icon: {icon_path}")
-        else:
-            logger.warning("No application icon found, using default")
+        if not icon_path:
+            logger.warning("No icon file found, using default icon")
+            return
 
-        # Create file API instance
-        file_api = FileAPI()
-
-        # Set webview settings to allow downloads
-        webview.settings["ALLOW_DOWNLOADS"] = True
-
-        # Create the window
-        logger.info("Starting pywebview window")
-        window = webview.create_window(
-            title=WINDOW_TITLE,
-            url=html_path,
-            width=WINDOW_WIDTH,
-            height=WINDOW_HEIGHT,
-            min_size=(800, 600),
-            text_select=True,
-            confirm_close=True,
-            js_api=file_api,
-        )
-    else:
-        window.show()
-
-
-def run_tray_icon():
-    """Run the tray icon in a separate thread."""
-    try:
         # Create the tray icon
-        icon = pystray.Icon("redactshotx")
-        icon.icon = Image.open(ICON_PATH)
-        icon.title = "RedactShotX"
-
-        # Create menu items
-        def show_window():
-            window.show()
-
-        def quit_app():
-            window.destroy()
-            icon.stop()
-            os._exit(0)
-
-        icon.menu = pystray.Menu(
-            pystray.MenuItem("Show", show_window), pystray.MenuItem("Quit", quit_app)
+        image = Image.open(icon_path)
+        menu = Menu(
+            MenuItem("Open", on_tray_open),
+            MenuItem("Exit", on_tray_exit),
         )
 
-        # Run the tray icon
-        icon.run()
+        # On macOS, we need to run the tray icon on the main thread
+        if platform.system() == "Darwin":
+
+            def create_tray_icon():
+                global tray_icon
+                tray_icon = Icon("RedactShotX", image, "RedactShotX", menu)
+                tray_icon.run()
+
+            # Schedule the tray icon creation on the main thread
+            webview.windows[0].evaluate_js(
+                """
+                setTimeout(() => {
+                    window.pywebview.api._create_tray_icon();
+                }, 1000);
+            """
+            )
+
+            # Add the create_tray_icon method to the API
+            def _create_tray_icon():
+                create_tray_icon()
+
+            # Add the method to the window's API
+            webview.windows[0]._create_tray_icon = _create_tray_icon
+        else:
+            # For other platforms, run normally
+            tray_icon = Icon("RedactShotX", image, "RedactShotX", menu)
+            tray_icon.run()
+
     except Exception as e:
         logger.error(f"Error running tray icon: {str(e)}")
+        logger.error(traceback.format_exc())
         # Don't exit the app if tray icon fails
         pass
 
 
 def main():
-    """Main entry point for the application."""
-    global api_process, window
-
-    # Register signal handlers
+    """Main entry point"""
+    # Set up signal handlers
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
-    try:
-        # Start API server
-        logger.info(f"Starting API server at {API_HOST}:{API_PORT}")
-        api_process = Process(target=run_api_server)
-        api_process.daemon = True  # Make it a daemon process
-        api_process.start()
+    # Create and start the window
+    create_window()
 
-        # Wait for API server to be ready
-        if not wait_for_api():
-            logger.error("Failed to start API server")
-            return
-
-        # Get HTML path
-        html_path = get_html_path()
-        logger.info(f"Using HTML path: {html_path}")
-
-        # Get icon path
-        icon_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "assets", "icon.icns"
-        )
-        logger.info(f"Using application icon: {icon_path}")
-
-        # Set webview settings
-        webview.settings["ALLOW_DOWNLOADS"] = True
-
-        # Create and start window
-        logger.info("Starting pywebview window")
-        window = webview.create_window(
-            "RedactShotX",
-            html_path,
-            width=1200,
-            height=800,
-            resizable=True,
-            min_size=(800, 600),
-            text_select=True,
-            confirm_close=True,
-        )
-
-        # Set the window icon if available
-        if os.path.exists(icon_path):
-            try:
-                window.set_icon(icon_path)
-            except Exception as e:
-                logger.warning(f"Could not set window icon: {str(e)}")
-
-        # Start tray icon in a separate thread
-        logger.info("Starting tray icon thread")
-        tray_thread = threading.Thread(target=run_tray_icon, daemon=True)
+    # Start the tray icon in a separate thread (except on macOS)
+    if platform.system() != "Darwin":
+        tray_thread = threading.Thread(target=run_tray_icon)
+        tray_thread.daemon = True
         tray_thread.start()
+    else:
+        # On macOS, we'll create the tray icon after the window is shown
+        run_tray_icon()
 
-        # Run the application
-        webview.start(debug=bool(os.getenv("DEBUG")))
-
-    except Exception as e:
-        logger.error(f"Error in main: {str(e)}")
-        raise
-    finally:
-        cleanup()
+    # Start the webview event loop with debug mode only if DEBUG is set
+    debug_mode = bool(os.getenv("DEBUG"))
+    webview.start(debug=debug_mode)
 
 
 if __name__ == "__main__":

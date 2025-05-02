@@ -7,7 +7,7 @@ import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
 import SettingsModal, { EnabledTypesRecord } from "./components/SettingsModal";
 import { processImage as processImageApi, checkApiStatus, processBulkImages as processBulkImagesApi } from "./services/api";
-import { API_URL, FEATURES } from "./constants";
+import { FEATURES } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
 type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -373,19 +373,11 @@ function App() {
   // Process image with redaction
   const processImage = async (imageData: string) => {
     if (!imageData) return;
-    
     setIsProcessing(true);
-    
     try {
-      // Check if we have a valid API URL
-      if (!API_URL) {
-        throw new Error("API URL is not configured");
-      }
-      
       // Reset any previous redaction outputs
       setRedactedImage(null);
       setRedactionCount(0);
-      
       // Create configuration object for the API
       const config = {
         redactionMethod,
@@ -395,20 +387,16 @@ function App() {
         customRegexes,
         partialMatch: true, // Default to partial matching for allow/deny lists
       };
-
       // Process the image via API
       const response = await processImageApi(imageData, config);
-  
       // Handle the response
       if (response.success) {
         setRedactedImage(response.redactedImage);
         setRedactionCount(response.redactionCount || 0);
-        
         // Apply manual blur if it exists
         if (manualBlurMask) {
           applyManualBlur(response.redactedImage, manualBlurMask, brushSize);
         }
-        
         showToast(`Successfully redacted ${response.redactionCount} elements`, 'success');
       } else {
         setApiError(response.error || "Unknown error occurred");

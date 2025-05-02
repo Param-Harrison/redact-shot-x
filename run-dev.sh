@@ -69,88 +69,53 @@ else
   fi
 fi
 
-# Run main operations
-(
-  echo -e "${YELLOW}📦 Activating virtual environment...${NC}"
-  source venv/bin/activate
-  echo -e "${GREEN}✔ Python in venv: $(python --version) ($(which python))${NC}"
-  
-  # Install Python dependencies
-  echo -e "${YELLOW}📦 Installing Python dependencies...${NC}"
-  pip install --upgrade pip setuptools wheel
-  pip install -e ./backend
-  pip install pywebview requests pystray
-  
-  # Install spaCy model if needed
-  if ! python -c "import spacy; spacy.load('en_core_web_trf')" 2>/dev/null; then
-    echo -e "${YELLOW}📦 Installing spaCy language model...${NC}"
-    python -m spacy download en_core_web_trf
-  fi
-  
-  # Install frontend dependencies if needed
-  if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}📦 Installing Node.js dependencies...${NC}"
-    npm install
-  fi
+# Check for required assets
+if [ ! -d "assets" ]; then
+  echo -e "${YELLOW}⚠ assets directory not found. Creating...${NC}"
+  mkdir -p assets
+fi
 
-  # Handle different modes
-  case "$1" in
-    "--build")
-      # Build and run using built files
-      echo -e "${GREEN}🏗 Building frontend...${NC}"
-      npm run build
-      
-      echo -e "${GREEN}🚀 Starting app with built files...${NC}"
-      python main.py --debug
-      PID=$!
-      ;;
-      
-    "--frontend-only")
-      # Start only the Vite frontend
-      echo -e "${GREEN}🌐 Starting React frontend with Vite...${NC}"
-      npm run dev
-      ;;
-      
-    "--backend-only")
-      # Start only the Python backend
-      echo -e "${YELLOW}⚙ Starting Python backend...${NC}"
-      python main.py --debug
-      ;;
-      
-    *)
-      # Default: Start both the Vite dev server and the pywebview app
-      echo -e "${GREEN}🌐 Starting Vite frontend server...${NC}"
-      npm run dev &
-      VITE_PID=$!
-      
-      # Wait for Vite to start
-      echo -e "${YELLOW}⏳ Waiting for Vite to start...${NC}"
-      sleep 3
-      
-      # Check if Vite is running
-      if ! kill -0 $VITE_PID 2>/dev/null; then
-        echo -e "${RED}❌ Vite failed to start${NC}"
-        exit 1
-      fi
-      
-      # Start the pywebview app
-      echo -e "${GREEN}🚀 Starting pywebview app...${NC}"
-      python main.py --debug
-      PID=$!
-      
-      # Check if the app is running
-      if ! kill -0 $PID 2>/dev/null; then
-        echo -e "${RED}❌ Python app failed to start${NC}"
-        exit 1
-      fi
-      ;;
-  esac
-  
-  # Wait for the main process if it exists
-  if [ -n "$PID" ]; then
-    wait $PID
+# Check for icon files
+if [ ! -f "assets/icon.svg" ] && [ ! -f "assets/icon.icns" ] && [ ! -f "assets/icon.ico" ]; then
+  echo -e "${YELLOW}⚠ No icon files found in assets directory. The app will run without a tray icon.${NC}"
+  echo -e "${YELLOW}  You can generate icons by running: python generate_icons.py${NC}"
+fi
+
+# Helper to check if pnpm is available
+has_pnpm() {
+  command -v pnpm >/dev/null 2>&1
+}
+
+if [[ "$1" == "--build" ]]; then
+  echo "[run-dev.sh] Building frontend..."
+  cd frontend
+  if has_pnpm; then
+    pnpm install
+    pnpm run build
+  else
+    npm install
+    npm run build
   fi
-)
+  cd ..
+  echo "[run-dev.sh] Launching app in production mode (dist-web)..."
+  python3 main.py
+else
+  echo "[run-dev.sh] Starting Vite dev server..."
+  cd frontend
+  if has_pnpm; then
+    pnpm install
+    pnpm run dev &
+  else
+    npm install
+    npm run dev &
+  fi
+  VITE_PID=$!
+  cd ..
+  echo "[run-dev.sh] Launching app in debug mode (localhost:3000)..."
+  DEBUG=1 python3 main.py
+  # Optionally kill Vite dev server on exit
+  kill $VITE_PID || true
+fi
 
 # Make sure we exit cleanly
 cleanup 
