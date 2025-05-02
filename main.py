@@ -203,6 +203,24 @@ class RedactShotXAPI:
                     result_json = json.loads(result)
                     result_json["filename"] = file_data.get("filename")
 
+                    # Extract and include the base64 image data for preview
+                    if "outputPath" in result_json and os.path.exists(
+                        result_json["outputPath"]
+                    ):
+                        with open(result_json["outputPath"], "rb") as img_file:
+                            img_data = img_file.read()
+                            img_ext = os.path.splitext(result_json["outputPath"])[
+                                1
+                            ].lstrip(".")
+                            if not img_ext:
+                                img_ext = "png"
+
+                            # Convert to base64
+                            b64_data = base64.b64encode(img_data).decode("utf-8")
+                            result_json["redactedImage"] = (
+                                f"data:image/{img_ext};base64,{b64_data}"
+                            )
+
                     # Clean up temp file
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
