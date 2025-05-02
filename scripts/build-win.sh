@@ -35,6 +35,30 @@ ensure_spacy_model() {
 # Ensure spaCy model is available
 ensure_spacy_model
 
+# Create runtime hook file
+echo "Creating runtime hook..."
+cat > runtime_hook.py << 'EOF'
+import os
+import sys
+import signal
+import atexit
+
+def handle_exit():
+    # Try to gracefully shutdown the API server
+    try:
+        import requests
+        requests.get("http://127.0.0.1:8004/shutdown", timeout=1)
+    except:
+        pass
+
+# Register exit handler
+atexit.register(handle_exit)
+
+# Handle signals
+signal.signal(signal.SIGINT, lambda s, f: handle_exit())
+signal.signal(signal.SIGTERM, lambda s, f: handle_exit())
+EOF
+
 # You must have wine + PyInstaller with Windows bootloader set up
 # Make sure you've bootstrapped PyInstaller bootloader for Windows beforehand
 
@@ -56,9 +80,13 @@ pyinstaller main.py \
   --hidden-import=en_core_web_trf \
   --hidden-import=pystray \
   --hidden-import=PIL \
+  --hidden-import=uvicorn \
+  --hidden-import=fastapi \
+  --hidden-import=multiprocessing \
   --collect-all=presidio_analyzer \
   --collect-all=presidio_image_redactor \
   --collect-all=spacy \
   --collect-all=en_core_web_trf \
   --collect-all=pystray \
-  --collect-all=PIL
+  --collect-all=PIL \
+  --runtime-hook=runtime_hook.py
