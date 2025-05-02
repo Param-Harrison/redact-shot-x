@@ -300,25 +300,11 @@ def create_window():
         min_size=(800, 600),
     )
 
-    # Add a small delay to ensure the window is ready
-    time.sleep(0.5)
+    # Optionally, add a loaded event handler for logging
+    def on_loaded():
+        logger.info("Webview window loaded and ready.")
 
-    # Verify API is exposed
-    try:
-        window.evaluate_js(
-            """
-            if (window.pywebview && window.pywebview.api) {
-                console.log('API is available');
-            } else {
-                console.error('API is not available');
-            }
-        """
-        )
-    except Exception as e:
-        logger.error(f"Error verifying API exposure: {str(e)}")
-        logger.error(traceback.format_exc())
-
-    logger.info("Window created with API exposed")
+    window.events.loaded += on_loaded
 
 
 def get_icon_path():
@@ -361,79 +347,56 @@ def get_icon_path():
     return str(icon_path) if icon_path.exists() else None
 
 
+def create_tray_icon():
+    global tray_icon
+    icon_path = get_icon_path()
+    if not icon_path:
+        logger.warning("No icon file found, using default icon")
+        return
+    image = Image.open(icon_path)
+    menu = Menu(
+        MenuItem("Open", on_tray_open),
+        MenuItem("Exit", on_tray_exit),
+    )
+    tray_icon = Icon("RedactShotX", image, "RedactShotX", menu)
+    tray_icon.run()
+
+
 def run_tray_icon():
-    """Run the system tray icon"""
+    """Run the system tray icon (for non-macOS platforms)"""
     global tray_icon
     try:
-        # Get the icon path
         icon_path = get_icon_path()
         if not icon_path:
             logger.warning("No icon file found, using default icon")
             return
-
-        # Create the tray icon
         image = Image.open(icon_path)
         menu = Menu(
             MenuItem("Open", on_tray_open),
             MenuItem("Exit", on_tray_exit),
         )
-
-        # On macOS, we need to run the tray icon on the main thread
-        if platform.system() == "Darwin":
-
-            def create_tray_icon():
-                global tray_icon
-                tray_icon = Icon("RedactShotX", image, "RedactShotX", menu)
-                tray_icon.run()
-
-            # Schedule the tray icon creation on the main thread
-            webview.windows[0].evaluate_js(
-                """
-                setTimeout(() => {
-                    window.pywebview.api._create_tray_icon();
-                }, 1000);
-            """
-            )
-
-            # Add the create_tray_icon method to the API
-            def _create_tray_icon():
-                create_tray_icon()
-
-            # Add the method to the window's API
-            webview.windows[0]._create_tray_icon = _create_tray_icon
-        else:
-            # For other platforms, run normally
-            tray_icon = Icon("RedactShotX", image, "RedactShotX", menu)
-            tray_icon.run()
-
+        tray_icon = Icon("RedactShotX", image, "RedactShotX", menu)
+        tray_icon.run()
     except Exception as e:
         logger.error(f"Error running tray icon: {str(e)}")
         logger.error(traceback.format_exc())
-        # Don't exit the app if tray icon fails
         pass
 
 
 def main():
     """Main entry point"""
-    # Set up signal handlers
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
-
-    # Create and start the window
     create_window()
-
-    # Start the tray icon in a separate thread (except on macOS)
-    if platform.system() != "Darwin":
+    debug_mode = bool(os.getenv("DEBUG"))
+    if platform.system() == "Darwin":
+        # Do NOT create a tray icon on macOS
+        webview.start(debug=debug_mode)
+    else:
         tray_thread = threading.Thread(target=run_tray_icon)
         tray_thread.daemon = True
         tray_thread.start()
-    else:
-        # On macOS, we'll create the tray icon after the window is shown
-        run_tray_icon()
-
-    # Start the webview event loop with debug mode only if DEBUG is set
-    debug_mode = bool(os.getenv("DEBUG"))
-    webview.start(debug=debug_mode)
+        webview.start(debug=debug_mode)
 
 
 if __name__ == "__main__":
