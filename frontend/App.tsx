@@ -332,6 +332,10 @@ function App() {
     // Save the original filename
     setOriginalFileName(file.name);
     
+    // Reset manual blur states when loading a new image
+    setManualBlurMask(null);
+    setBrushSize(20);
+    
     // Use more memory-efficient approach for FileReader
     const reader = new FileReader();
     
@@ -393,11 +397,10 @@ function App() {
       if (response.success) {
         setRedactedImage(response.redactedImage);
         setRedactionCount(response.redactionCount || 0);
-        // Apply manual blur if it exists
-        if (manualBlurMask) {
-          applyManualBlur(response.redactedImage, manualBlurMask, brushSize);
+        // Only show the redaction count toast after processing is complete
+        if (response.redactionCount > 0) {
+          showToast(`Successfully redacted ${response.redactionCount} elements`, 'success');
         }
-        showToast(`Successfully redacted ${response.redactionCount} elements`, 'success');
       } else {
         setApiError(response.error || "Unknown error occurred");
         showToast("Failed to process image", 'error');
@@ -498,8 +501,10 @@ function App() {
         // Update the redacted image with the manually blurred version
         setRedactedImage(canvas.toDataURL('image/jpeg', 0.95));
         
-        // Show a toast notification confirming the manual blur was applied
-        showToast('Manual blur applied', 'success');
+        // Only show toast if we actually processed some regions
+        if (processedRegions.size > 0) {
+          showToast('Manual blur applied', 'success');
+        }
         
         // Clean up
         canvas.width = 0;
@@ -738,6 +743,8 @@ function App() {
     setImage(null);
     setRedactedImage(null);
     setRedactionCount(0);
+    setManualBlurMask(null);
+    setBrushSize(20);
     // Reset scroll position
     window.scrollTo(0, 0);
   };
