@@ -91,6 +91,7 @@ function App() {
   const [isBulkProcessing, setIsBulkProcessing] = useState<boolean>(false);
   const [manualBlurMask, setManualBlurMask] = useState<string | null>(null);
   const [brushSize, setBrushSize] = useState<number>(20);
+  const [originalRedactedImage, setOriginalRedactedImage] = useState<string | null>(null);
 
   // Enhanced viewport handling for orientation changes
   useEffect(() => {
@@ -396,6 +397,7 @@ function App() {
       // Handle the response
       if (response.success) {
         setRedactedImage(response.redactedImage);
+        setOriginalRedactedImage(response.redactedImage); // Store the original redacted image
         setRedactionCount(response.redactionCount || 0);
         // Only show the redaction count toast after processing is complete
         if (response.redactionCount > 0) {
@@ -416,18 +418,21 @@ function App() {
 
   // Handle manual blur application
   const handleManualBlur = (blurMask: string, size: number) => {
-    setManualBlurMask(blurMask);
-    setBrushSize(size);
-    
     // If blurMask is empty string, it means we're clearing the blur
     if (blurMask === '') {
-      // If we have a redacted image, reset to the original redacted version without manual blur
-      if (redactedImage) {
-        // Show a toast notification confirming the manual blur was cleared
+      // Reset to the original redacted image
+      if (originalRedactedImage) {
+        setRedactedImage(originalRedactedImage);
+        setManualBlurMask(null);
+        setBrushSize(20);
         showToast('Manual blur cleared', 'success');
       }
       return;
     }
+    
+    // Update states for new blur mask
+    setManualBlurMask(blurMask);
+    setBrushSize(size);
     
     // If we already have a redacted image, apply the blur immediately
     if (redactedImage && blurMask) {
