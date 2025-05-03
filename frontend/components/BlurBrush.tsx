@@ -266,7 +266,10 @@ const BlurBrush: React.FC<BlurBrushProps> = ({
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.lineWidth = brushSize;
-    ctx.strokeStyle = brushColor; // Use primary color
+    ctx.strokeStyle = brushColor;
+    
+    // Force a re-render of the canvas
+    canvasRef.current.width = canvasRef.current.width;
   };
 
   return (

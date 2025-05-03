@@ -2,9 +2,6 @@
  * Application constants and environment-specific settings
  */
 
-// API configuration
-export const API_URL = 'http://127.0.0.1:8004'; // Use localhost IP for API connection
-
 // Feature flags
 export const FEATURES = {
   ENABLE_LOGS: true,

@@ -7,7 +7,7 @@ import ImagePreview from "./components/ImagePreview";
 import ActionButtons from "./components/ActionButtons";
 import SettingsModal, { EnabledTypesRecord } from "./components/SettingsModal";
 import { processImage as processImageApi, checkApiStatus, processBulkImages as processBulkImagesApi } from "./services/api";
-import { API_URL, FEATURES } from "./constants";
+import { FEATURES } from "./constants";
 
 // Define the type of enabledTypes for improved type safety
 type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -91,6 +91,7 @@ function App() {
   const [isBulkProcessing, setIsBulkProcessing] = useState<boolean>(false);
   const [manualBlurMask, setManualBlurMask] = useState<string | null>(null);
   const [brushSize, setBrushSize] = useState<number>(20);
+  const [originalRedactedImage, setOriginalRedactedImage] = useState<string | null>(null);
 
   // Enhanced viewport handling for orientation changes
   useEffect(() => {
@@ -332,6 +333,10 @@ function App() {
     // Save the original filename
     setOriginalFileName(file.name);
     
+    // Reset manual blur states when loading a new image
+    setManualBlurMask(null);
+    setBrushSize(20);
+    
     // Use more memory-efficient approach for FileReader
     const reader = new FileReader();
     
@@ -373,19 +378,11 @@ function App() {
   // Process image with redaction
   const processImage = async (imageData: string) => {
     if (!imageData) return;
-    
     setIsProcessing(true);
-    
     try {
-      // Check if we have a valid API URL
-      if (!API_URL) {
-        throw new Error("API URL is not configured");
-      }
-      
       // Reset any previous redaction outputs
       setRedactedImage(null);
       setRedactionCount(0);
-      
       // Create configuration object for the API
       const config = {
         redactionMethod,
@@ -395,21 +392,17 @@ function App() {
         customRegexes,
         partialMatch: true, // Default to partial matching for allow/deny lists
       };
-
       // Process the image via API
       const response = await processImageApi(imageData, config);
-  
       // Handle the response
       if (response.success) {
         setRedactedImage(response.redactedImage);
+        setOriginalRedactedImage(response.redactedImage); // Store the original redacted image
         setRedactionCount(response.redactionCount || 0);
-        
-        // Apply manual blur if it exists
-        if (manualBlurMask) {
-          applyManualBlur(response.redactedImage, manualBlurMask, brushSize);
+        // Only show the redaction count toast after processing is complete
+        if (response.redactionCount > 0) {
+          showToast(`Successfully redacted ${response.redactionCount} elements`, 'success');
         }
-        
-        showToast(`Successfully redacted ${response.redactionCount} elements`, 'success');
       } else {
         setApiError(response.error || "Unknown error occurred");
         showToast("Failed to process image", 'error');
@@ -425,18 +418,21 @@ function App() {
 
   // Handle manual blur application
   const handleManualBlur = (blurMask: string, size: number) => {
-    setManualBlurMask(blurMask);
-    setBrushSize(size);
-    
     // If blurMask is empty string, it means we're clearing the blur
     if (blurMask === '') {
-      // If we have a redacted image, reset to the original redacted version without manual blur
-      if (redactedImage) {
-        // Show a toast notification confirming the manual blur was cleared
+      // Reset to the original redacted image
+      if (originalRedactedImage) {
+        setRedactedImage(originalRedactedImage);
+        setManualBlurMask(null);
+        setBrushSize(20);
         showToast('Manual blur cleared', 'success');
       }
       return;
     }
+    
+    // Update states for new blur mask
+    setManualBlurMask(blurMask);
+    setBrushSize(size);
     
     // If we already have a redacted image, apply the blur immediately
     if (redactedImage && blurMask) {
@@ -510,8 +506,10 @@ function App() {
         // Update the redacted image with the manually blurred version
         setRedactedImage(canvas.toDataURL('image/jpeg', 0.95));
         
-        // Show a toast notification confirming the manual blur was applied
-        showToast('Manual blur applied', 'success');
+        // Only show toast if we actually processed some regions
+        if (processedRegions.size > 0) {
+          showToast('Manual blur applied', 'success');
+        }
         
         // Clean up
         canvas.width = 0;
@@ -750,6 +748,8 @@ function App() {
     setImage(null);
     setRedactedImage(null);
     setRedactionCount(0);
+    setManualBlurMask(null);
+    setBrushSize(20);
     // Reset scroll position
     window.scrollTo(0, 0);
   };

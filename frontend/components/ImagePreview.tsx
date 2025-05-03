@@ -24,16 +24,8 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
   // Show a visual intro for the tool on first render
   useEffect(() => {
     if (!toolIntroShown && (image || redactedImage) && !isProcessing) {
-      // Briefly highlight the tool button to draw attention
-      setActiveTool('blur-brush');
-      
-      // Reset after a brief period
-      const timer = setTimeout(() => {
-        setActiveTool(null);
-        setToolIntroShown(true);
-      }, 1500);
-      
-      return () => clearTimeout(timer);
+      // Show the tool intro text without activating the tool
+      setToolIntroShown(true);
     }
   }, [image, redactedImage, isProcessing, toolIntroShown]);
   
