@@ -94,11 +94,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
                 onToolActiveChange={setIsToolActive}
               />
             </div>
-            
-            {/* Instructions for the modal */}
-            <div className="preview-instructions">
-              {isToolActive ? 'Click tool again to exit' : 'Click anywhere outside or press ESC to close'}
-            </div>
+          </div>
+          {/* Instructions for the modal */}
+          <div className="preview-instructions">
+            {isToolActive ? 'Click tool again to exit' : 'Click anywhere outside or press ESC to close'}
           </div>
         </div>
       )}

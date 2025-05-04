@@ -1228,8 +1228,8 @@ function App() {
                 </svg>
               </button>
               <img src={selectedImage} alt="Preview" />
-              <div className="preview-instructions">Click anywhere outside or press ESC to close</div>
             </div>
+            <div className="preview-instructions">Click anywhere outside or press ESC to close</div>
           </div>
         )}
       </div>
