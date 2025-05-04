@@ -3139,6 +3139,31 @@ body, .app-container, .settings-modal-content {
   border-radius: 4px;
 }
 
+.item-preview:hover .preview-overlay {
+  opacity: 1;
+}
+
+.item-preview .preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+.item-preview .preview-overlay svg {
+  color: white;
+  width: 32px;
+  height: 32px;
+}
+
 .item-actions {
   display: flex;
   justify-content: flex-end;
