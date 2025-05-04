@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import ImagePreviewModal from './ImagePreviewModal';
+import { applyManualBlur } from '../utils/imageUtils';
 
 interface BulkImage {
   file: File;
@@ -16,17 +18,19 @@ interface BulkImageGalleryProps {
   setBulkImages: React.Dispatch<React.SetStateAction<BulkImage[]>>;
   isProcessing: boolean;
   showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  onApplyBlur?: (imageData: string, maskData: string, maskSize: number) => void;
 }
 
 const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
   bulkImages,
   setBulkImages,
   isProcessing,
-  showToast
+  showToast,
+  onApplyBlur
 }) => {
   if (!bulkImages.length) return null;
   
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<BulkImage | null>(null);
   
   const downloadImage = async (img: BulkImage) => {
     if (!img.processed || !img.result?.success || !img.result.redactedImage) return;
@@ -62,29 +66,21 @@ const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
       
       // Check if we're running in pywebview
       if (typeof window !== 'undefined' && 'pywebview' in window) {
-        // Using pywebview API to save file
         try {
           // @ts-ignore - TypeScript doesn't know about pywebview
-          window.pywebview.api.save_file({
-            filename: fileName,
-            data: base64Data,
-            mimeType: mimeType
-          }).then((result: any) => {
-            if (result && result.success) {
-              showToast("File saved successfully", "success");
-            } else {
-              showToast("Failed to save file", "error");
-            }
-          }).catch((error: any) => {
-            console.error("Error saving file via pywebview:", error);
-            showToast("Error saving file", "error");
-          });
+          const result = await window.pywebview.api.save_file(fileName, base64Data, mimeType);
+          if (result && result.success) {
+            showToast('Image downloaded successfully', 'success');
+          } else {
+            throw new Error('Failed to save file');
+          }
         } catch (error) {
           console.error("Error calling pywebview API:", error);
+          // Fall back to browser download method
           fallbackDownload();
         }
       } else {
-        // Standard browser download as fallback
+        // Fall back to browser download method
         fallbackDownload();
       }
       
@@ -206,6 +202,84 @@ const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
   const removeImage = (index: number) => {
     setBulkImages(prevImages => prevImages.filter((_, i) => i !== index));
   };
+
+  const handleApplyBlur = async (blurMask: string, size: number) => {
+    if (!selectedImage || !selectedImage.result?.redactedImage) return;
+    
+    try {
+      // If blurMask is empty string, it means we're clearing the blur
+      if (blurMask === '') {
+        // Reset to the original redacted image
+        const originalRedactedImage = selectedImage.result.redactedImage;
+        
+        // Update the image in the bulk images array
+        setBulkImages(prevImages => 
+          prevImages.map(img => {
+            if (img === selectedImage) {
+              return {
+                ...img,
+                result: {
+                  ...img.result!,
+                  redactedImage: originalRedactedImage
+                }
+              };
+            }
+            return img;
+          })
+        );
+        
+        // Update the selected image
+        setSelectedImage(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            result: {
+              ...prev.result!,
+              redactedImage: originalRedactedImage
+            }
+          };
+        });
+        
+        showToast('Manual blur cleared', 'success');
+        return;
+      }
+      
+      const blurredImage = await applyManualBlur(selectedImage.result.redactedImage, blurMask, size);
+      
+      // Update the image in the bulk images array
+      setBulkImages(prevImages => 
+        prevImages.map(img => {
+          if (img === selectedImage) {
+            return {
+              ...img,
+              result: {
+                ...img.result!,
+                redactedImage: blurredImage
+              }
+            };
+          }
+          return img;
+        })
+      );
+      
+      // Update the selected image
+      setSelectedImage(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          result: {
+            ...prev.result!,
+            redactedImage: blurredImage
+          }
+        };
+      });
+      
+      showToast('Manual blur applied', 'success');
+    } catch (error) {
+      console.error('Error applying blur:', error);
+      showToast('Failed to apply blur', 'error');
+    }
+  };
   
   return (
     <div className="bulk-image-gallery">
@@ -255,7 +329,10 @@ const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
             </div>
             
             {img.processed && img.result?.success && img.result.redactedImage && (
-              <div className="item-preview">
+              <div 
+                className="item-preview"
+                onClick={() => setSelectedImage(img)}
+              >
                 <img 
                   src={img.result.redactedImage} 
                   alt={`Redacted ${img.file.name}`} 
@@ -307,6 +384,15 @@ const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
           <div className="spinner"></div>
           <p>Processing {bulkImages.filter(img => !img.processed).length} remaining images...</p>
         </div>
+      )}
+
+      {selectedImage && selectedImage.result?.redactedImage && (
+        <ImagePreviewModal
+          image={null}
+          redactedImage={selectedImage.result.redactedImage}
+          onClose={() => setSelectedImage(null)}
+          onApplyBlur={handleApplyBlur}
+        />
       )}
     </div>
   );
