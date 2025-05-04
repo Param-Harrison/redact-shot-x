@@ -70,18 +70,6 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({
           aria-label="Image preview"
         >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            {/* Close button */}
-            <button 
-              className="close-button"
-              onClick={() => !isToolActive && setShowFullImage(false)}
-              aria-label="Close preview"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-            
             {/* Image in modal with relative positioning to support the blur brush */}
             <div className="modal-image-container">
               <img src={redactedImage || image || ''} alt="Preview" />

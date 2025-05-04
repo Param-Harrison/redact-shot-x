@@ -1,6 +1,6 @@
 .image-tools-controls {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   z-index: 10;
   padding: 8px;
@@ -10,7 +10,7 @@
 
 .image-tools-controls.in-modal {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   left: 20px;
 }
 

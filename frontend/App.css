@@ -3381,31 +3381,6 @@ body, .app-container, .settings-modal-content {
   background-color: #1e293b;
 }
 
-.image-preview-modal .close-button {
-  position: absolute;
-  top: -40px;
-  right: 0;
-  background-color: transparent;
-  border: none;
-  color: white;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 1001;
-}
-
-.image-preview-modal .close-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.image-preview-modal .close-button svg {
-  width: 24px;
-  height: 24px;
-}
 
 /* App Content wrapper for consistent layout */
 .app-content {
@@ -4339,5 +4314,3 @@ body, .app-container, .settings-modal-content {
   right: 20px;
   z-index: 1055; /* Higher than other elements */
 }
-
-
