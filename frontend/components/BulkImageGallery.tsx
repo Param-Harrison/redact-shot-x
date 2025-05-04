@@ -8,6 +8,7 @@ interface BulkImage {
   result?: {
     success: boolean;
     redactedImage?: string;
+    originalRedactedImage?: string;
     error?: string;
     redactionCount?: number;
   };
@@ -210,7 +211,7 @@ const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
       // If blurMask is empty string, it means we're clearing the blur
       if (blurMask === '') {
         // Reset to the original redacted image
-        const originalRedactedImage = selectedImage.result.redactedImage;
+        const originalRedactedImage = selectedImage.result.originalRedactedImage || selectedImage.result.redactedImage;
         
         // Update the image in the bulk images array
         setBulkImages(prevImages => 
@@ -242,6 +243,35 @@ const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
         
         showToast('Manual blur cleared', 'success');
         return;
+      }
+      
+      // Store the original redacted image if it's not already stored
+      if (!selectedImage.result.originalRedactedImage) {
+        setBulkImages(prevImages => 
+          prevImages.map(img => {
+            if (img === selectedImage) {
+              return {
+                ...img,
+                result: {
+                  ...img.result!,
+                  originalRedactedImage: img.result!.redactedImage
+                }
+              };
+            }
+            return img;
+          })
+        );
+        
+        setSelectedImage(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            result: {
+              ...prev.result!,
+              originalRedactedImage: prev.result!.redactedImage
+            }
+          };
+        });
       }
       
       const blurredImage = await applyManualBlur(selectedImage.result.redactedImage, blurMask, size);
