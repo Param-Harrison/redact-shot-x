@@ -1103,6 +1103,10 @@ function App() {
       }
     };
     
+    const removeImage = (index: number) => {
+      setBulkImages(prevImages => prevImages.filter((_, i) => i !== index));
+    };
+    
     return (
       <div className="bulk-image-gallery">
         <div className="gallery-header">
@@ -1144,25 +1148,24 @@ function App() {
                       `${img.result.redactionCount || 0} redactions` : 
                       'Failed')}
                 </span>
+                <button 
+                  className="remove-button"
+                  onClick={() => removeImage(index)}
+                  title="Remove image"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
               </div>
               
               {img.processed && img.result?.success && img.result.redactedImage && (
-                <div 
-                  className="item-preview"
-                  onClick={() => setSelectedImage(img.result.redactedImage)}
-                >
+                <div className="item-preview">
                   <img 
                     src={img.result.redactedImage} 
                     alt={`Redacted ${img.file.name}`} 
                   />
-                  <div className="preview-overlay">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                      <line x1="11" y1="8" x2="11" y2="14"></line>
-                      <line x1="8" y1="11" x2="14" y2="11"></line>
-                    </svg>
-                  </div>
                 </div>
               )}
               
@@ -1202,34 +1205,6 @@ function App() {
           <div className="processing-status">
             <div className="spinner"></div>
             <p>Processing {bulkImages.filter(img => !img.processed).length} remaining images...</p>
-          </div>
-        )}
-        
-        {/* Image Preview Modal */}
-        {selectedImage && (
-          <div 
-            className="image-preview-modal"
-            onClick={() => setSelectedImage(null)}
-            onKeyDown={(e) => e.key === 'Escape' && setSelectedImage(null)}
-            tabIndex={0} // Make it focusable to receive keyboard events
-            role="dialog"
-            aria-modal="true"
-            aria-label="Image preview"
-          >
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <button 
-                className="close-button"
-                onClick={() => setSelectedImage(null)}
-                aria-label="Close preview"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-              <img src={selectedImage} alt="Preview" />
-            </div>
-            <div className="preview-instructions">Click anywhere outside or press ESC to close</div>
           </div>
         )}
       </div>

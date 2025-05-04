@@ -3069,12 +3069,11 @@ body, .app-container, .settings-modal-content {
 
 .item-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 0.75rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  flex-shrink: 0;
-  overflow: hidden;
+  gap: 0.5rem;
 }
 
 .dark-mode .item-header {
@@ -4313,4 +4312,36 @@ body, .app-container, .settings-modal-content {
   top: 20px;
   right: 20px;
   z-index: 1055; /* Higher than other elements */
+}
+
+.remove-button {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: #6b7280;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.remove-button:hover {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.dark-mode .remove-button {
+  color: #9ca3af;
+}
+
+.dark-mode .remove-button:hover {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+.remove-button svg {
+  width: 16px;
+  height: 16px;
 }
