@@ -94,3 +94,7 @@ Thumbs.db
 # SpaCy model content
 en_core_web_trf
 en_core_web_sm
+
+# temp files
+temp/*
+temp_*

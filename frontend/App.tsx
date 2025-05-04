@@ -1142,12 +1142,6 @@ function App() {
             >
               <div className="item-header">
                 <span className="item-filename" title={img.file.name}>{img.file.name}</span>
-                <span className="item-status">
-                  {!img.processed ? 'Processing...' : 
-                    (img.result?.success ? 
-                      `${img.result.redactionCount || 0} redactions` : 
-                      'Failed')}
-                </span>
                 <button 
                   className="remove-button"
                   onClick={() => removeImage(index)}
@@ -1181,22 +1175,29 @@ function App() {
                 </div>
               )}
               
-              {img.processed && img.result?.success && (
-                <div className="item-actions">
-                  <button 
-                    className="primary-button" 
-                    onClick={() => downloadImage(img)}
-                    disabled={!img.result.redactedImage}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Download
-                  </button>
-                </div>
-              )}
+              <div className="item-footer">
+                {img.processed && img.result?.success && (
+                  <span className="redactions-count">
+                    {img.result.redactionCount || 0} redactions
+                  </span>
+                )}
+                {img.processed && img.result?.success && (
+                  <div className="item-actions">
+                    <button 
+                      className="primary-button" 
+                      onClick={() => downloadImage(img)}
+                      disabled={!img.result.redactedImage}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                      Download
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>

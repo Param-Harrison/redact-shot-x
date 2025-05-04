@@ -4345,3 +4345,41 @@ body, .app-container, .settings-modal-content {
   width: 16px;
   height: 16px;
 }
+
+.item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 0.5rem;
+}
+
+.dark-mode .item-footer {
+  border-top-color: rgba(255, 255, 255, 0.05);
+}
+
+.redactions-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dark-mode .redactions-count {
+  color: #9ca3af;
+}
+
+.redactions-count::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #6b7280;
+}
+
+.dark-mode .redactions-count::before {
+  background-color: #9ca3af;
+}
