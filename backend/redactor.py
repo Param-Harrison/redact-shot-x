@@ -4,6 +4,7 @@ import logging
 import re
 from PIL import Image, ImageFilter
 import os
+import sys
 
 from presidio_analyzer import (
     AnalyzerEngine,
@@ -23,11 +24,25 @@ class ImageRedactor:
     def __init__(self):
         logger.info("🔍 Initializing ImageRedactor with comprehensive PII detection")
 
+        # Get the base path for the application
+        if getattr(sys, "frozen", False):
+            # Running in a bundle (PyInstaller)
+            base_path = sys._MEIPASS
+            model_path = os.path.join(base_path, "en_core_web_trf")
+            logger.info(f"Running in bundle, using model path: {model_path}")
+        else:
+            # Running in normal Python environment
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            model_path = "en_core_web_trf"
+            logger.info(
+                f"Running in normal environment, using model path: {model_path}"
+            )
+
         # Set up the NLP engine with spaCy using a larger model for better accuracy
         provider = NlpEngineProvider(
             nlp_configuration={
                 "nlp_engine_name": "spacy",
-                "models": [{"lang_code": "en", "model_name": "en_core_web_trf"}],
+                "models": [{"lang_code": "en", "model_name": model_path}],
             }
         )
         nlp_engine = provider.create_engine()

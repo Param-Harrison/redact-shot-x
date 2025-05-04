@@ -44,13 +44,19 @@ def ensure_spacy_model():
 def build_mac():
     ensure_spacy_model()
 
+    # Get the absolute path to the spaCy model
+    model_path = os.path.abspath(SPACY_MODEL)
+    if not os.path.exists(model_path):
+        print(f"❌ Error: spaCy model not found at {model_path}")
+        sys.exit(1)
+
     PyInstaller.__main__.run(
         [
             "main.py",
             f"--name={APP_NAME}",
             "--windowed",
             "--icon=assets/icon.icns",
-            f"--add-data={SPACY_MODEL}:{SPACY_MODEL}",
+            f"--add-data={model_path}:{SPACY_MODEL}",  # Use absolute path
             f"--add-data=dist-web:dist-web",
             "--hidden-import=presidio_analyzer",
             "--hidden-import=presidio_image_redactor",
