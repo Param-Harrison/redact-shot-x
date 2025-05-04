@@ -34,7 +34,8 @@
 }
 
 .tool-button.active {
-  background: rgba(255, 255, 255, 0.2);
+  background-color: var(--primary-color);
+  transform: translateY(-1px);
 }
 
 .tool-settings {
@@ -43,16 +44,6 @@
   background: rgba(0, 0, 0, 0.7);
   border-radius: 4px;
   color: white;
-}
-
-.brush-size-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.brush-size-control input {
-  flex: 1;
 }
 
 .tool-instructions {
