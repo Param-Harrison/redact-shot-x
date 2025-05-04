@@ -3143,7 +3143,6 @@ body, .app-container, .settings-modal-content {
   display: flex;
   justify-content: flex-end;
   padding: 0.75rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
   flex-shrink: 0;
   height: 60px;
 }
@@ -4350,7 +4349,6 @@ body, .app-container, .settings-modal-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   gap: 0.5rem;
 }
@@ -4364,22 +4362,10 @@ body, .app-container, .settings-modal-content {
   color: #6b7280;
   display: flex;
   align-items: center;
+  padding-left: 1rem;
   gap: 0.25rem;
 }
 
 .dark-mode .redactions-count {
   color: #9ca3af;
-}
-
-.redactions-count::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #6b7280;
-}
-
-.dark-mode .redactions-count::before {
-  background-color: #9ca3af;
 }
