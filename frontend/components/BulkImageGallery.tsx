@@ -196,8 +196,43 @@ const BulkImageGallery: React.FC<BulkImageGalleryProps> = ({
     }
   };
   
-  const clearGallery = () => {
-    setBulkImages([]);
+  const clearGallery = async () => {
+    try {
+      // Revoke object URLs to prevent memory leaks
+      bulkImages.forEach(img => {
+        if (img.result?.redactedImage?.startsWith('blob:')) {
+          URL.revokeObjectURL(img.result.redactedImage);
+        }
+        if (img.result?.originalRedactedImage?.startsWith('blob:')) {
+          URL.revokeObjectURL(img.result.originalRedactedImage);
+        }
+      });
+
+      // Clear the state
+      setBulkImages([]);
+      
+      // Clean up temp files
+      if (typeof window !== 'undefined' && 'pywebview' in window) {
+        try {
+          // @ts-ignore - TypeScript doesn't know about pywebview
+          await window.pywebview.api.cleanup_temp_files();
+        } catch (error) {
+          console.error('Error cleaning up temp files:', error);
+        }
+      }
+
+      // Suggest garbage collection when browser is idle
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(() => {
+          if (typeof window !== 'undefined' && 'gc' in window) {
+            // @ts-ignore - TypeScript doesn't know about gc
+            window.gc();
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing gallery:', error);
+    }
   };
   
   const removeImage = (index: number) => {

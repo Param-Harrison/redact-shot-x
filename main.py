@@ -63,6 +63,23 @@ class RedactShotXAPI:
             logger.error(traceback.format_exc())
             return {"success": False, "error": str(e)}
 
+    def cleanup_temp_files(self):
+        """Clean up all temporary files created by the application"""
+        try:
+            # Find all temp_* files in the current directory
+            temp_files = [f for f in os.listdir(".") if f.startswith("temp_")]
+            for temp_file in temp_files:
+                try:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                        logger.info(f"Removed temp file: {temp_file}")
+                except Exception as e:
+                    logger.error(f"Error removing temp file {temp_file}: {e}")
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Error in cleanup_temp_files: {e}")
+            return {"success": False, "error": str(e)}
+
     def save_files(self, files):
         """Save multiple files using a directory selection dialog"""
         try:
@@ -165,6 +182,7 @@ class RedactShotXAPI:
 
             results = []
             redactor = ImageRedactor()
+            temp_files = []  # Keep track of temp files to clean up
 
             for file_data in files_data:
                 try:
@@ -195,6 +213,7 @@ class RedactShotXAPI:
 
                     # Process the image
                     temp_path = f"temp_{file_data.get('filename')}"
+                    temp_files.append(temp_path)  # Add to cleanup list
                     binary_data = base64.b64decode(file_data.get("data", ""))
                     with open(temp_path, "wb") as f:
                         f.write(binary_data)
@@ -221,10 +240,6 @@ class RedactShotXAPI:
                                 f"data:image/{img_ext};base64,{b64_data}"
                             )
 
-                    # Clean up temp file
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
-
                     results.append(result_json)
 
                 except Exception as e:
@@ -240,7 +255,15 @@ class RedactShotXAPI:
                         }
                     )
 
-            gc.collect()
+            # Clean up all temp files
+            for temp_file in temp_files:
+                try:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                        logger.info(f"Removed temp file: {temp_file}")
+                except Exception as e:
+                    logger.error(f"Error removing temp file {temp_file}: {e}")
+
             logger.info("Bulk upload processing completed")
             return {"results": results}
 
@@ -265,12 +288,28 @@ def cleanup():
     global window
     logger.info("Cleaning up resources...")
 
+    # Clean up temporary files
+    try:
+        temp_files = [f for f in os.listdir(".") if f.startswith("temp_")]
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                    logger.info(f"Removed temp file: {temp_file}")
+            except Exception as e:
+                logger.error(f"Error removing temp file {temp_file}: {e}")
+    except Exception as e:
+        logger.error(f"Error cleaning up temp files: {e}")
+
+    # Clean up window
     if window:
         try:
             window.destroy()
         except:
             pass
 
+    # Force garbage collection
+    gc.collect()
     logger.info("Cleanup complete")
 
 
@@ -317,6 +356,14 @@ def create_window():
         resizable=True,
         min_size=(800, 600),
     )
+
+    # Add close handler to ensure cleanup
+    def on_closed():
+        logger.info("Window closed, cleaning up...")
+        cleanup()
+        sys.exit(0)
+
+    window.events.closed += on_closed
 
     # Optionally, add a loaded event handler for logging
     def on_loaded():
@@ -403,8 +450,10 @@ def run_tray_icon():
 
 def main():
     """Main entry point"""
+    # Register signal handlers
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
+
     create_window()
     debug_mode = bool(os.getenv("DEBUG"))
     if platform.system() == "Darwin":
