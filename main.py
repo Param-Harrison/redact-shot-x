@@ -152,11 +152,27 @@ class RedactShotXAPI:
             logger.debug(f"File data: {file_data.get('filename')}")
             logger.debug(f"Config: {config}")
 
+            # Validate file type
+            if not ImageRedactor.is_valid_image_file(file_data.get("filename", "")):
+                return {"success": False, "error": "Not a supported image format"}
+
             # Save the uploaded file temporarily
             temp_path = f"temp_{file_data.get('filename', 'uploaded_image')}"
             binary_data = base64.b64decode(file_data.get("data", ""))
+
+            if not binary_data:
+                return {"success": False, "error": "Empty file data"}
+
+            # Create temporary file and verify it's a valid image
             with open(temp_path, "wb") as f:
                 f.write(binary_data)
+
+            try:
+                # Verify the file is a valid image before processing
+                with Image.open(temp_path) as img:
+                    img.verify()  # Verify the file is a valid image
+            except Exception as e:
+                return {"success": False, "error": f"Invalid image file: {str(e)}"}
 
             # Process the image
             redactor = ImageRedactor()
@@ -185,23 +201,11 @@ class RedactShotXAPI:
             temp_files = []  # Keep track of temp files to clean up
 
             for file_data in files_data:
+                temp_path = None
                 try:
                     # Skip non-image files
                     filename = file_data.get("filename", "").lower()
-                    if not filename.endswith(
-                        (
-                            ".png",
-                            ".jpg",
-                            ".jpeg",
-                            ".gif",
-                            ".webp",
-                            ".tiff",
-                            ".tif",
-                            ".bmp",
-                            ".svg",
-                            ".dcm",
-                        )
-                    ):
+                    if not ImageRedactor.is_valid_image_file(filename):
                         results.append(
                             {
                                 "filename": file_data.get("filename"),
@@ -215,8 +219,34 @@ class RedactShotXAPI:
                     temp_path = f"temp_{file_data.get('filename')}"
                     temp_files.append(temp_path)  # Add to cleanup list
                     binary_data = base64.b64decode(file_data.get("data", ""))
+
+                    if not binary_data:
+                        results.append(
+                            {
+                                "filename": file_data.get("filename"),
+                                "success": False,
+                                "error": "Empty file data",
+                            }
+                        )
+                        continue
+
+                    # Create temporary file and verify it's a valid image
                     with open(temp_path, "wb") as f:
                         f.write(binary_data)
+
+                    try:
+                        # Verify the file is a valid image before processing
+                        with Image.open(temp_path) as img:
+                            img.verify()  # Verify the file is a valid image
+                    except Exception as e:
+                        results.append(
+                            {
+                                "filename": file_data.get("filename"),
+                                "success": False,
+                                "error": f"Invalid image file: {str(e)}",
+                            }
+                        )
+                        continue
 
                     result = redactor.redact_image(temp_path, config)
                     result_json = json.loads(result)
@@ -254,15 +284,13 @@ class RedactShotXAPI:
                             "error": str(e),
                         }
                     )
-
-            # Clean up all temp files
-            for temp_file in temp_files:
-                try:
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                        logger.info(f"Removed temp file: {temp_file}")
-                except Exception as e:
-                    logger.error(f"Error removing temp file {temp_file}: {e}")
+                finally:
+                    # Clean up temp file
+                    if temp_path and os.path.exists(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except Exception as e:
+                            logger.error(f"Error removing temp file {temp_path}: {e}")
 
             logger.info("Bulk upload processing completed")
             return {"results": results}

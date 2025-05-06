@@ -59,20 +59,24 @@ const webApi: ApiInterface = {
     return response.json();
   },
   redact_bulk_upload: async (filesData: any[], config: any) => {
-    const formData = new FormData();
-    filesData.forEach((file, index) => {
-      formData.append(`files`, new Blob([file.data], { type: 'application/octet-stream' }), file.filename);
-    });
-    if (config) {
-      formData.append('config_json', JSON.stringify(config));
-    }
+    // Process each file using the base64 endpoint
+    const results = await Promise.all(filesData.map(async (file) => {
+      const response = await fetch('http://localhost:8004/redact/base64', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          imageData: file.data,
+          config,
+          filename: file.filename 
+        })
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      result.filename = file.filename;
+      return result;
+    }));
     
-    const response = await fetch('http://localhost:8004/redact/bulk-upload', {
-      method: 'POST',
-      body: formData
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    return response.json();
+    return { results };
   },
   save_file: async (data: { filename: string, data: string }) => {
     // In web mode, we'll use the browser's download API
