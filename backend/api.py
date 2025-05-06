@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
-from .redactor import ImageRedactor
+from backend.redactor import ImageRedactor
 import uvicorn
 import sys
 
