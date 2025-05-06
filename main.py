@@ -156,32 +156,14 @@ class RedactShotXAPI:
             if not ImageRedactor.is_valid_image_file(file_data.get("filename", "")):
                 return {"success": False, "error": "Not a supported image format"}
 
-            # Save the uploaded file temporarily
-            temp_path = f"temp_{file_data.get('filename', 'uploaded_image')}"
-            binary_data = base64.b64decode(file_data.get("data", ""))
-
-            if not binary_data:
+            # Get base64 data
+            base64_data = file_data.get("data", "")
+            if not base64_data:
                 return {"success": False, "error": "Empty file data"}
 
-            # Create temporary file and verify it's a valid image
-            with open(temp_path, "wb") as f:
-                f.write(binary_data)
-
-            try:
-                # Verify the file is a valid image before processing
-                with Image.open(temp_path) as img:
-                    img.verify()  # Verify the file is a valid image
-            except Exception as e:
-                return {"success": False, "error": f"Invalid image file: {str(e)}"}
-
-            # Process the image
+            # Process the image using base64 data
             redactor = ImageRedactor()
-            result = redactor.redact_image(temp_path, config)
-
-            # Clean up
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            gc.collect()
+            result = redactor.redact_image_base64(base64_data, config)
 
             logger.info("Uploaded image redaction completed successfully")
             return json.loads(result)
@@ -198,10 +180,8 @@ class RedactShotXAPI:
 
             results = []
             redactor = ImageRedactor()
-            temp_files = []  # Keep track of temp files to clean up
 
             for file_data in files_data:
-                temp_path = None
                 try:
                     # Skip non-image files
                     filename = file_data.get("filename", "").lower()
@@ -215,12 +195,9 @@ class RedactShotXAPI:
                         )
                         continue
 
-                    # Process the image
-                    temp_path = f"temp_{file_data.get('filename')}"
-                    temp_files.append(temp_path)  # Add to cleanup list
-                    binary_data = base64.b64decode(file_data.get("data", ""))
-
-                    if not binary_data:
+                    # Get base64 data
+                    base64_data = file_data.get("data", "")
+                    if not base64_data:
                         results.append(
                             {
                                 "filename": file_data.get("filename"),
@@ -230,46 +207,10 @@ class RedactShotXAPI:
                         )
                         continue
 
-                    # Create temporary file and verify it's a valid image
-                    with open(temp_path, "wb") as f:
-                        f.write(binary_data)
-
-                    try:
-                        # Verify the file is a valid image before processing
-                        with Image.open(temp_path) as img:
-                            img.verify()  # Verify the file is a valid image
-                    except Exception as e:
-                        results.append(
-                            {
-                                "filename": file_data.get("filename"),
-                                "success": False,
-                                "error": f"Invalid image file: {str(e)}",
-                            }
-                        )
-                        continue
-
-                    result = redactor.redact_image(temp_path, config)
+                    # Process the image using base64 data
+                    result = redactor.redact_image_base64(base64_data, config)
                     result_json = json.loads(result)
                     result_json["filename"] = file_data.get("filename")
-
-                    # Extract and include the base64 image data for preview
-                    if "outputPath" in result_json and os.path.exists(
-                        result_json["outputPath"]
-                    ):
-                        with open(result_json["outputPath"], "rb") as img_file:
-                            img_data = img_file.read()
-                            img_ext = os.path.splitext(result_json["outputPath"])[
-                                1
-                            ].lstrip(".")
-                            if not img_ext:
-                                img_ext = "png"
-
-                            # Convert to base64
-                            b64_data = base64.b64encode(img_data).decode("utf-8")
-                            result_json["redactedImage"] = (
-                                f"data:image/{img_ext};base64,{b64_data}"
-                            )
-
                     results.append(result_json)
 
                 except Exception as e:
@@ -284,13 +225,6 @@ class RedactShotXAPI:
                             "error": str(e),
                         }
                     )
-                finally:
-                    # Clean up temp file
-                    if temp_path and os.path.exists(temp_path):
-                        try:
-                            os.remove(temp_path)
-                        except Exception as e:
-                            logger.error(f"Error removing temp file {temp_path}: {e}")
 
             logger.info("Bulk upload processing completed")
             return {"results": results}
