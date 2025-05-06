@@ -8,9 +8,11 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
-from .redactor import ImageRedactor
+from backend.redactor import ImageRedactor
 import uvicorn
 import sys
+import base64
+from PIL import Image
 
 # Constants
 PORT_API = 8004
@@ -77,14 +79,21 @@ async def redact_uploaded_image(
 ):
     try:
         logger.info(f"📥 Upload: {file.filename}")
-        temp_path = f"temp_{file.filename}"
-        with open(temp_path, "wb") as buffer:
-            buffer.write(await file.read())
 
+        # Validate file type
+        if not ImageRedactor.is_valid_image_file(file.filename, file.content_type):
+            raise HTTPException(status_code=400, detail="Not a supported image format")
+
+        # Process file
+        file_data = await file.read()
+        temp_path = ImageRedactor()._handle_temp_file(file_data, file.filename)
+
+        # Process config
         config = json.loads(config_json) if config_json else None
         redactor = ImageRedactor()
         result = redactor.redact_image(temp_path, config)
 
+        # Cleanup
         os.remove(temp_path)
         gc.collect()
 
@@ -106,26 +115,10 @@ async def redact_bulk_uploaded_images(
         redactor = ImageRedactor()
 
         for file in files:
-            temp_path = f"temp_{file.filename}"
             try:
                 # Skip non-image files
-                filename = file.filename.lower()
-                if not (
-                    filename.endswith(
-                        (
-                            ".png",
-                            ".jpg",
-                            ".jpeg",
-                            ".gif",
-                            ".webp",
-                            ".tiff",
-                            ".tif",
-                            ".bmp",
-                            ".svg",
-                            ".dcm",
-                        )
-                    )
-                    or file.content_type.startswith("image/")
+                if not ImageRedactor.is_valid_image_file(
+                    file.filename, file.content_type
                 ):
                     results.append(
                         {
@@ -136,65 +129,30 @@ async def redact_bulk_uploaded_images(
                     )
                     continue
 
-                # Process the image
-                with open(temp_path, "wb") as buffer:
-                    buffer.write(await file.read())
+                # Read file data
+                file_data = await file.read()
 
-                result = redactor.redact_image(temp_path, config)
+                # Convert to base64
+                base64_data = base64.b64encode(file_data).decode("utf-8")
+
+                # Process the image using base64 data
+                result = redactor.redact_image_base64(base64_data, config)
                 result_json = json.loads(result)
 
                 # Add the filename to the result
                 result_json["filename"] = file.filename
 
-                # Extract and include the base64 image data for preview
-                if "outputPath" in result_json and os.path.exists(
-                    result_json["outputPath"]
-                ):
-                    with open(result_json["outputPath"], "rb") as img_file:
-                        img_data = img_file.read()
-                        img_ext = os.path.splitext(result_json["outputPath"])[1].lstrip(
-                            "."
-                        )
-                        if not img_ext:
-                            img_ext = "png"
-
-                        # Convert to base64
-                        import base64
-
-                        b64_data = base64.b64encode(img_data).decode("utf-8")
-                        result_json["redactedImage"] = (
-                            f"data:image/{img_ext};base64,{b64_data}"
-                        )
-
                 results.append(result_json)
 
             except Exception as e:
-                logger.exception(f"Error processing file {file.filename}")
+                logger.error(f"Error processing file {file.filename}: {str(e)}")
                 results.append(
-                    {"filename": file.filename, "success": False, "error": str(e)}
+                    {
+                        "filename": file.filename,
+                        "success": False,
+                        "error": str(e),
+                    }
                 )
-            finally:
-                # Always try to clean up temp files, even if processing failed
-                try:
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
-                        logger.info(f"Removed temp file: {temp_path}")
-
-                    # Also clean up any output files
-                    output_path = None
-                    for result in results:
-                        if (
-                            result.get("filename") == file.filename
-                            and result.get("success")
-                            and result.get("outputPath")
-                        ):
-                            output_path = result["outputPath"]
-                            if os.path.exists(output_path):
-                                os.remove(output_path)
-                                logger.info(f"Removed output file: {output_path}")
-                                break
-                except Exception as cleanup_error:
-                    logger.error(f"Error cleaning up files: {cleanup_error}")
 
         gc.collect()
         return JSONResponse(content={"results": results})

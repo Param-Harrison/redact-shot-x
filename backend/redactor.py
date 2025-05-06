@@ -461,29 +461,8 @@ class ImageRedactor:
         image = Image.open(image_path)
         original_format = image.format  # Save the original image format
 
-        # Process configuration if provided
-        allow_list = []
-        custom_regexes = []
-
-        if (
-            config
-            and config.get("enabledTypes", {}).get("ALLOW_LIST")
-            and config.get("allowListTags")
-        ):
-            allow_list = config["allowListTags"]
-            logger.info(f"Using allow list with {len(allow_list)} items")
-
-        if (
-            config
-            and config.get("enabledTypes", {}).get("CUSTOM_REGEX")
-            and config.get("customRegexes")
-        ):
-            custom_regexes = config["customRegexes"]
-
-        # Create custom recognizers from config
-        ad_hoc_recognizers = []
-        if config:
-            ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
+        # Process configuration using shared method
+        allow_list, custom_regexes, ad_hoc_recognizers = self._process_config(config)
 
         redacted_image, results = self._blur_redact(
             image, ad_hoc_recognizers, allow_list, custom_regexes, config
@@ -575,27 +554,15 @@ class ImageRedactor:
                 background.paste(image, mask=image.split()[3])
                 image = background
 
+            # Process configuration using shared method
+            allow_list, custom_regexes, ad_hoc_recognizers = self._process_config(
+                config
+            )
+
             # Process image with redaction
             redaction_method = "blur"
             if config and "redactionMethod" in config:
                 redaction_method = config["redactionMethod"]
-
-            # Get custom recognizers from config
-            ad_hoc_recognizers = None
-            if config and "enabledTypes" in config:
-                ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
-
-            # Allow list processing
-            allow_list = None
-            if config and "allowListTags" in config:
-                allow_list = config["allowListTags"]
-
-            # Custom regex support
-            custom_regexes = None
-            if config and "customRegexes" in config:
-                # Only use if enabled in config
-                if config.get("enabledTypes", {}).get("CUSTOM_REGEX", False):
-                    custom_regexes = config["customRegexes"]
 
             # Redact the image based on method
             if redaction_method == "box":
@@ -933,3 +900,78 @@ class ImageRedactor:
                 logger.error(f"Error applying redaction: {str(e)}")
 
         return redacted_image, all_results
+
+    @staticmethod
+    def is_valid_image_file(filename: str, content_type: str = None) -> bool:
+        """Check if a file is a valid image based on extension and content type."""
+        valid_extensions = (
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".tiff",
+            ".tif",
+            ".bmp",
+            ".svg",
+            ".dcm",
+        )
+
+        # Check by extension
+        filename = filename.lower()
+        if any(filename.endswith(ext) for ext in valid_extensions):
+            return True
+
+        # Check by content type if provided
+        if content_type and content_type.startswith("image/"):
+            return True
+
+        return False
+
+    def _process_config(self, config: dict = None) -> tuple:
+        """Process configuration and extract relevant settings.
+
+        Returns:
+            tuple: (allow_list, custom_regexes, ad_hoc_recognizers)
+        """
+        allow_list = []
+        custom_regexes = []
+        ad_hoc_recognizers = []
+
+        if config:
+            # Process allow list
+            if config.get("enabledTypes", {}).get("ALLOW_LIST") and config.get(
+                "allowListTags"
+            ):
+                allow_list = config["allowListTags"]
+                logger.info(f"Using allow list with {len(allow_list)} items")
+
+            # Process custom regexes
+            if config.get("enabledTypes", {}).get("CUSTOM_REGEX") and config.get(
+                "customRegexes"
+            ):
+                custom_regexes = config["customRegexes"]
+
+            # Create custom recognizers
+            ad_hoc_recognizers = self._create_custom_recognizers_from_config(config)
+
+        return allow_list, custom_regexes, ad_hoc_recognizers
+
+    def _handle_temp_file(self, file_data: bytes, filename: str) -> str:
+        """Handle temporary file creation and cleanup.
+
+        Args:
+            file_data: Binary file data
+            filename: Original filename
+
+        Returns:
+            str: Path to temporary file
+        """
+        temp_path = f"temp_{filename}"
+        try:
+            with open(temp_path, "wb") as f:
+                f.write(file_data)
+            return temp_path
+        except Exception as e:
+            logger.error(f"Error creating temporary file: {str(e)}")
+            raise

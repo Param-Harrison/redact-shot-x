@@ -1,12 +1,115 @@
 import { log } from '../constants';
 
-// Get the pywebview API instance
-declare const window: any;
-const api = window.pywebview.api;
+// Type declarations
+declare global {
+  interface Window {
+    pywebview?: {
+      api?: {
+        redact_image: (imageData: string, config: any) => Promise<any>;
+        redact_bulk_upload: (filesData: any[], config: any) => Promise<any>;
+        save_file: (data: { filename: string, data: string }) => Promise<any>;
+        save_files: (files: Array<{filename: string, data: string}>) => Promise<any>;
+      };
+    };
+  }
+}
+
+// Environment detection
+const isDesktop = () => {
+  return typeof window !== 'undefined' && window.pywebview && window.pywebview.api;
+};
+
+// API interface
+interface ApiInterface {
+  redact_image: (imageData: string, config: any) => Promise<any>;
+  redact_bulk_upload: (filesData: any[], config: any) => Promise<any>;
+  save_file: (data: { filename: string, data: string }) => Promise<any>;
+  save_files: (files: Array<{filename: string, data: string}>) => Promise<any>;
+}
+
+// Desktop API implementation
+const desktopApi: ApiInterface = {
+  redact_image: async (imageData: string, config: any) => {
+    if (!window.pywebview?.api) throw new Error('Desktop API not available');
+    return window.pywebview.api.redact_image(imageData, config);
+  },
+  redact_bulk_upload: async (filesData: any[], config: any) => {
+    if (!window.pywebview?.api) throw new Error('Desktop API not available');
+    return window.pywebview.api.redact_bulk_upload(filesData, config);
+  },
+  save_file: async (data: { filename: string, data: string }) => {
+    if (!window.pywebview?.api) throw new Error('Desktop API not available');
+    return window.pywebview.api.save_file(data);
+  },
+  save_files: async (files: Array<{filename: string, data: string}>) => {
+    if (!window.pywebview?.api) throw new Error('Desktop API not available');
+    return window.pywebview.api.save_files(files);
+  }
+};
+
+// Web API implementation
+const webApi: ApiInterface = {
+  redact_image: async (imageData: string, config: any) => {
+    const response = await fetch('http://localhost:8004/redact/base64', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageData, config })
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+  redact_bulk_upload: async (filesData: any[], config: any) => {
+    // Process each file using the base64 endpoint
+    const results = await Promise.all(filesData.map(async (file) => {
+      const response = await fetch('http://localhost:8004/redact/base64', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          imageData: file.data,
+          config,
+          filename: file.filename 
+        })
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      result.filename = file.filename;
+      return result;
+    }));
+    
+    return { results };
+  },
+  save_file: async (data: { filename: string, data: string }) => {
+    // In web mode, we'll use the browser's download API
+    const link = document.createElement('a');
+    link.href = data.data;
+    link.download = data.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return { success: true };
+  },
+  save_files: async (files: Array<{filename: string, data: string}>) => {
+    // In web mode, we'll download files one by one
+    const results: Array<{filename: string, success: boolean}> = [];
+    for (const file of files) {
+      const link = document.createElement('a');
+      link.href = file.data;
+      link.download = file.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      results.push({ filename: file.filename, success: true });
+    }
+    return { results };
+  }
+};
+
+// Select the appropriate API implementation
+const api: ApiInterface = isDesktop() ? desktopApi : webApi;
 
 // Helper function to check if API is available
 const checkApiAvailability = () => {
-  if (!window.pywebview || !window.pywebview.api) {
+  if (isDesktop() && !window.pywebview?.api) {
     throw new Error('Pywebview API is not available. Please ensure the application is running properly.');
   }
   return true;
@@ -18,10 +121,15 @@ const checkApiAvailability = () => {
 export const checkApiStatus = async () => {
   try {
     checkApiAvailability();
-    return { 
-      ok: true,
-      status: 200 
-    };
+    if (isDesktop()) {
+      return { ok: true, status: 200 };
+    } else {
+      const response = await fetch('http://localhost:8004/health');
+      return { 
+        ok: response.ok,
+        status: response.status 
+      };
+    }
   } catch (error) {
     log('API status check failed:', error);
     return { 
@@ -43,7 +151,7 @@ export const processImage = async (imageData: string, config: any) => {
     const dataSizeKB = Math.round(imageData.length / 1024);
     log(`Processing image of size: ${dataSizeKB}KB`);
     
-    // Use integrated API for processing
+    // Use appropriate API for processing
     const result = await api.redact_image(imageData, config);
     log('Image processing result:', result);
     return result;
@@ -75,7 +183,7 @@ export const processBulkImages = async (files: File[], config: any) => {
       };
     }));
     
-    // Use integrated API for bulk processing
+    // Use appropriate API for bulk processing
     const result = await api.redact_bulk_upload(filesData, config);
     log('Bulk processing result:', result);
     return result;
